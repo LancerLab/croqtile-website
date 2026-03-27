@@ -1,0 +1,41 @@
+---
+title: "Parallel Execution"
+description: "SPMD parallelism and loop constructs in Croktile."
+order: 3
+---
+
+## Parallel Blocks
+
+Croktile uses SPMD-style parallelism:
+
+```cpp
+parallel (blockIdx) {
+  // Code runs across all thread blocks
+  parallel (threadIdx) {
+    // Code runs across all threads within a block
+  }
+}
+```
+
+## Loop Constructs
+
+The `within` construct provides structured loops:
+
+```cpp
+within (i : N) {
+  // Iterates i from 0 to N-1
+  output[i] = input[i] * 2.0;
+}
+```
+
+## Combining Parallelism and Loops
+
+```cpp
+parallel (blockIdx) {
+  shared = dma.copy input.chunkat(block_size, 1) => smem;
+  within (k : K / tile_k) {
+    mma shared.chunkat(1, tile_k)
+        weights.chunkat(1, tile_k) => output;
+  }
+}
+```

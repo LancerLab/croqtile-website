@@ -1,0 +1,42 @@
+---
+title: "DMA and Data Movement"
+description: "Chunk-based data movement with Croktile's DMA primitives."
+order: 4
+---
+
+## The DMA Statement
+
+Croktile simplifies data movement with a declarative DMA syntax:
+
+```cpp
+dma.copy input.chunkat(tiling_factors) => shared;
+```
+
+This moves a chunk of `input` with specified tiling factors to shared memory.
+
+## Tiling with ChunkAt
+
+The `chunkat` operator tiles data along specified dimensions:
+
+```cpp
+// Tile a [128, 256] tensor into [32, 64] chunks
+shared = dma.copy data.chunkat(4, 4) => smem;
+```
+
+## Multi-stage Pipelines
+
+For advanced optimizations, use multi-buffering patterns:
+
+```cpp
+parallel (blockIdx) {
+  buf_a = dma.copy input_a.chunkat(bm, 1) => smem;
+  buf_b = dma.copy input_b.chunkat(bn, 1) => smem;
+  
+  within (k : K / bk) {
+    mma buf_a.chunkat(1, bk)
+        buf_b.chunkat(1, bk) => output;
+  }
+}
+```
+
+The Croktile compiler automatically manages descriptor configuration, offset calculations, and memory barriers.

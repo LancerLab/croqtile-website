@@ -1,0 +1,51 @@
+---
+title: "Getting Started with Croktile"
+description: "Learn how to install and use the Croktile compiler for TileFlow GPU programming."
+order: 1
+---
+
+## Installation
+
+Download the latest release from the [Croktile releases page](https://croktile.io) and follow the platform-specific instructions.
+
+### Prerequisites
+
+- **C++ Compiler**: GCC 9.0+ or Clang 5.0+
+- **CMake**: 3.16+
+- **CUDA Toolkit**: 11.0+ (for GPU targets)
+
+### Build from Source
+
+```bash
+git clone https://github.com/croktile/croktile.git
+cd croktile
+make build
+```
+
+After building, the `croktile` compiler binary will be available in the `build/` directory.
+
+## Your First Croktile Program
+
+Create a file named `hello.co`:
+
+```cpp
+__co__ auto add(f32 [N] a, f32 [N] b) {
+  f32 [N] output;
+  parallel (threadIdx) {
+    output = a + b;
+  }
+  return output;
+}
+```
+
+Compile and run:
+
+```bash
+croktile compile hello.co -t cute
+```
+
+## What's Next?
+
+- [Shaped Data Manipulation](/docs/shapes)
+- [Parallel Execution](/docs/parallel)
+- [DMA and Data Movement](/docs/dma)

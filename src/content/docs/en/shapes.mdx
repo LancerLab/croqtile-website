@@ -1,0 +1,39 @@
+---
+title: "Shaped Data Manipulation"
+description: "How Croktile handles multi-dimensional data with compile-time shape checking."
+order: 2
+---
+
+## Shape Declarations
+
+In Croktile, data types include shape information directly:
+
+```cpp
+f32 [8, 4, 12] shaped_data;
+```
+
+This declares a 3-dimensional tensor of 32-bit floats with shape `[8, 4, 12]`.
+
+## Shape Operations
+
+Croktile provides powerful shape manipulation with `span`:
+
+```cpp
+new_shape : shaped_data.span { (0)/2, (1)/4, 1, (2) };
+```
+
+This creates a new shape with tiling factors `{2, 4, 1}` from the original data and adds an extra dimension.
+
+## Symbolic Dimensions
+
+Use symbolic dimensions for dynamic shapes:
+
+```cpp
+__co__ auto matmul(f32 [M, K] lhs, f32 [N, K] rhs) {
+  // M, N, K resolved at runtime
+  f32 [M, N] output;
+  return output;
+}
+```
+
+Symbolic dimensions are automatically checked for consistency at compile time.
