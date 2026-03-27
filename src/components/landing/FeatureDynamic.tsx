@@ -1,42 +1,82 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { FeatureCard } from "./FeatureCard";
 import { ScrollReveal } from "./ScrollReveal";
+import { HighlightedCode } from "./HighlightedCode";
 
 const shapes = [
-  { m: 128, k: 256, n: 512, label: "Small" },
-  { m: 1024, k: 1024, n: 1024, label: "Medium" },
-  { m: 4096, k: 4096, n: 4096, label: "Large" },
-  { m: 8192, k: 2048, n: 16384, label: "Rectangular" },
+  { m: 128, k: 256, n: 512, wm: 64, wn: 128, tk: 64, label: "Small" },
+  { m: 1024, k: 1024, n: 1024, wm: 64, wn: 128, tk: 64, label: "Medium" },
+  { m: 4096, k: 4096, n: 4096, wm: 64, wn: 256, tk: 64, label: "Large" },
+  { m: 8192, k: 2048, n: 16384, wm: 64, wn: 256, tk: 64, label: "Rectangular" },
 ];
 
-const symbolicCode = `// One kernel — any shape. No recompilation.
-__co__ auto matmul(f32 [M, K] lhs,
-                   f32 [N, K] rhs) {
-  f32 [M, N] output;
-  parallel (blockIdx) {
-    shared_a = dma.copy
-      lhs.chunkat(bm, 1) => smem;
-    shared_b = dma.copy
-      rhs.chunkat(bn, 1) => smem;
-    within (k : K / bk) {
-      mma shared_a.chunkat(1, bk)
-          shared_b.chunkat(1, bk)
-          => output;
-    }
+const croktileSymbolic = `// One kernel handles ANY shape — M, N, K
+// are symbolic dimensions resolved at runtime.
+// Shared memory is sized dynamically from symbols.
+__co__ void spmm(
+    global f8_e4m3 [M, PACKED_K] lhs_packed,
+    global u8 [M, META_COLS] lhs_meta,
+    global f8_e4m3 [N, K] rhs,
+    global f16 [M, N] output) {
+  // PACKED_K = K/2 — compiler infers relationship
+  // META_COLS = K/8 — from sparsity metadata
+  parallel {block_m, block_n}
+    by [cdiv(M, WARP_M),
+        cdiv(N, WARP_N)] : block {
+    // shared memory sized from symbolic dims
+    shared f8_e4m3 [WARP_M, K/2] lhs_s;
+    shared f8_e4m3 [WARP_N, K] rhs_s;
+    // ...
   }
-  return output;
 }`;
+
+const competitorProblems = [
+  {
+    framework: "CUDA",
+    problem: "All dimensions must be template parameters or runtime arguments with manual size calculations",
+    code: `// Must manually compute every buffer size
+__shared__ float smA[BM][BK]; // compile-time
+// Dynamic SMEM requires manual calc + launch arg
+int smem = BM * BK * sizeof(float);
+kernel<<<grid, block, smem>>>(...)`,
+  },
+  {
+    framework: "Triton",
+    problem: "Block sizes must be tl.constexpr — no dynamic shared memory, no symbolic relationships",
+    code: `# Block sizes are compile-time constants
+BLOCK_M: tl.constexpr  # can't be symbolic
+BLOCK_K: tl.constexpr
+# No way to express PACKED_K = K/2
+# Must recompile for each shape combination`,
+  },
+  {
+    framework: "Helion",
+    problem: "Tile sizes chosen by autotuner — no explicit control over memory hierarchy or relationships",
+    code: `# Tile sizes decided by autotuner
+for tile_m in hl.tile(M):  # opaque sizing
+  for tile_k in hl.tile(K):
+    # No control over shared memory layout
+    # No symbolic dimension relationships
+    acc += a[tile_m, tile_k] @ b[...]`,
+  },
+];
 
 export function FeatureDynamic() {
   const t = useTranslations("features.dynamic");
-  const [activeShape, setActiveShape] = useState(0);
+  const [activeShape, setActiveShape] = useState(2);
+  const [activeProblem, setActiveProblem] = useState(0);
   const shape = shapes[activeShape];
 
   const points = [t("point1"), t("point2"), t("point3")];
+
+  const blocks_m = Math.ceil(shape.m / shape.wm);
+  const blocks_n = Math.ceil(shape.n / shape.wn);
+  const k_iters = Math.ceil(shape.k / shape.tk);
+  const smem_kb = Math.round((shape.wm * shape.tk * 2 + shape.wn * shape.tk * 2) / 1024);
 
   return (
     <FeatureCard
@@ -64,18 +104,20 @@ export function FeatureDynamic() {
           ))}
         </div>
 
-        {/* Interactive shape picker */}
+        {/* Interactive shape picker with derived dimensions */}
         <ScrollReveal delay={0.15}>
           <div className="rounded-xl border bg-[var(--card)] overflow-hidden">
             <div className="px-4 py-2.5 border-b bg-[var(--muted)] flex items-center gap-2">
-              <span className="text-xs font-medium text-[var(--muted-foreground)]">Pick a shape</span>
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">
+                Pick a shape — derived dims update automatically
+              </span>
             </div>
             <div className="grid grid-cols-4 gap-0 border-b">
               {shapes.map((s, i) => (
                 <button
                   key={s.label}
                   onClick={() => setActiveShape(i)}
-                  className={`py-3 px-2 text-center text-xs font-medium transition-all border-r last:border-r-0 ${
+                  className={`py-2.5 px-2 text-center text-xs font-medium transition-all border-r last:border-r-0 ${
                     activeShape === i
                       ? "bg-mint-500/10 text-mint-500"
                       : "hover:bg-[var(--muted)] text-[var(--muted-foreground)]"
@@ -85,67 +127,98 @@ export function FeatureDynamic() {
                 </button>
               ))}
             </div>
-            <div className="p-4">
+            <div className="p-4 space-y-3">
+              {/* Primary symbolic dims */}
               <div className="flex items-center justify-center gap-3 font-mono text-sm">
-                <motion.div
-                  key={`m-${activeShape}`}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg bg-mint-500/10 border border-mint-500/20"
-                >
-                  <span className="text-xs text-[var(--muted-foreground)]">M</span>
-                  <span className="text-lg font-bold text-mint-500">{shape.m}</span>
-                </motion.div>
-                <span className="text-[var(--muted-foreground)]">&times;</span>
-                <motion.div
-                  key={`k-${activeShape}`}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.05 }}
-                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg bg-mint-500/10 border border-mint-500/20"
-                >
-                  <span className="text-xs text-[var(--muted-foreground)]">K</span>
-                  <span className="text-lg font-bold text-mint-500">{shape.k}</span>
-                </motion.div>
-                <span className="text-[var(--muted-foreground)]">&times;</span>
-                <motion.div
-                  key={`n-${activeShape}`}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="flex flex-col items-center gap-1 px-4 py-2 rounded-lg bg-mint-500/10 border border-mint-500/20"
-                >
-                  <span className="text-xs text-[var(--muted-foreground)]">N</span>
-                  <span className="text-lg font-bold text-mint-500">{shape.n}</span>
-                </motion.div>
+                {[
+                  { name: "M", val: shape.m },
+                  { name: "K", val: shape.k },
+                  { name: "N", val: shape.n },
+                ].map((d, i) => (
+                  <motion.div
+                    key={`${d.name}-${activeShape}`}
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg bg-mint-500/10 border border-mint-500/20"
+                  >
+                    <span className="text-[10px] text-[var(--muted-foreground)]">{d.name}</span>
+                    <span className="text-base font-bold text-mint-500">{d.val}</span>
+                  </motion.div>
+                ))}
               </div>
-              <motion.p
-                key={activeShape}
+              {/* Derived dimensions */}
+              <motion.div
+                key={`derived-${activeShape}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-xs text-center text-[var(--muted-foreground)] mt-3"
+                className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center"
               >
-                matmul(f32[{shape.m}, {shape.k}], f32[{shape.n}, {shape.k}]) → f32[{shape.m}, {shape.n}]
-              </motion.p>
+                {[
+                  { label: "PACKED_K", val: `${shape.k / 2}`, formula: "K/2" },
+                  { label: "META_COLS", val: `${shape.k / 8}`, formula: "K/8" },
+                  { label: "Grid", val: `${blocks_m}×${blocks_n}`, formula: "⌈M/WM⌉×⌈N/WN⌉" },
+                  { label: "SMEM", val: `${smem_kb}KB`, formula: "auto" },
+                ].map((d) => (
+                  <div
+                    key={d.label}
+                    className="rounded-lg border bg-[var(--muted)]/50 px-2 py-1.5"
+                  >
+                    <div className="text-[10px] text-[var(--muted-foreground)]">{d.label}</div>
+                    <div className="text-sm font-bold text-[var(--foreground)]">{d.val}</div>
+                    <div className="text-[9px] text-mint-500 font-mono">{d.formula}</div>
+                  </div>
+                ))}
+              </motion.div>
+              <p className="text-[10px] text-center text-[var(--muted-foreground)]">
+                K iterations: {k_iters} &middot; All derived from symbolic M, K, N
+              </p>
             </div>
           </div>
         </ScrollReveal>
 
+        {/* Why competitors can't */}
         <ScrollReveal delay={0.25}>
           <div className="rounded-xl border bg-[var(--card)] overflow-hidden">
-            <div className="flex items-center gap-2 px-4 py-2.5 border-b bg-[var(--muted)]">
-              <div className="flex gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
-                <span className="w-2.5 h-2.5 rounded-full bg-green-400/80" />
-              </div>
-              <span className="text-xs text-[var(--muted-foreground)] ml-2 font-mono">
-                dynamic_matmul.co
+            <div className="px-4 py-2.5 border-b bg-[var(--muted)]">
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">
+                Why competitors can&apos;t do this
               </span>
             </div>
-            <div className="p-4 font-mono text-xs leading-relaxed overflow-x-auto">
-              <pre className="text-[var(--foreground)]"><code>{symbolicCode}</code></pre>
+            <div className="flex border-b">
+              {competitorProblems.map((c, i) => (
+                <button
+                  key={c.framework}
+                  onClick={() => setActiveProblem(i)}
+                  className={`flex-1 py-2 text-xs font-medium transition-all border-r last:border-r-0 ${
+                    activeProblem === i
+                      ? "bg-red-500/10 text-red-500"
+                      : "hover:bg-[var(--muted)] text-[var(--muted-foreground)]"
+                  }`}
+                >
+                  {c.framework}
+                </button>
+              ))}
             </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeProblem}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="p-4 space-y-2"
+              >
+                <p className="text-xs text-red-500 dark:text-red-400 font-medium">
+                  {competitorProblems[activeProblem].problem}
+                </p>
+                <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 font-mono text-xs overflow-x-auto opacity-70">
+                  <HighlightedCode
+                    code={competitorProblems[activeProblem].code}
+                    lang={competitorProblems[activeProblem].framework === "CUDA" ? "cpp" : "python"}
+                  />
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
         </ScrollReveal>
       </div>

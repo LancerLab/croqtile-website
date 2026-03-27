@@ -10,3 +10,4 @@ export { GlowCard } from "./GlowCard";
 export { ScrollReveal } from "./ScrollReveal";
 export { CodeBlock } from "./CodeBlock";
 export { FeatureCard } from "./FeatureCard";
+export { HighlightedCode } from "./HighlightedCode";

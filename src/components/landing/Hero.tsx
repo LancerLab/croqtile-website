@@ -3,115 +3,165 @@
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "@/i18n/routing";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
+import { HighlightedCode } from "./HighlightedCode";
 
 const codeExamples = [
   {
-    label: "Matrix Multiply",
-    file: "sgemm.co",
-    code: `__co__ void gpu_matmul(
-    f32 [4096, 4096] lhs,
-    f32 [4096, 4096] rhs,
-    f32 [4096, 4096] output) {
+    label: "Sparse GEMM (FP8 E4M3)",
+    file: "gemm_sp_e4m3.co",
+    code: `__co__ void spmm(
+    global f8_e4m3 [M, PACKED_K] lhs_packed,
+    global u8 [M, META_COLS] lhs_meta,
+    global f8_e4m3 [N, K] rhs,
+    global f16 [M, N] output) {
+  parallel {block_m, block_n}
+      by [cdiv(M, SPMM_WARP_M),
+          cdiv(N, SPMM_WARP_N)] : block {
+    shared event full[STAGES], empty[STAGES];
+    shared f8_e4m3 [STAGES * SPMM_WARP_M,
+                    SPMM_PACKED_TILE_K] lhs_s;
+    shared f8_e4m3 [STAGES * SPMM_WARP_N,
+                    SPMM_TILE_K] rhs_s;
 
-  parallel {p, q} by [64, 64] {
-    with index = {m_tile, n_tile, k_tile}
-         in [4, 4, 128] {
-      shared f32[lhs.span(0)/#p,
-                 rhs.span(1)/#q] l2_out;
-      foreach k_tile {
-        lhs_load = dma.copy
-          lhs.chunkat(p, k_tile) => shared;
-        rhs_load = dma.copy
-          rhs.chunkat(k_tile, q) => shared;
-        call mma_kernel(lhs_load.data,
-          rhs_load.data, l2_out);
+    parallel p1 by 2 : group-4 {
+      inthreads.async (p1 == 0) {
+        foreach {iv_k} in [cdiv(K, SPMM_TILE_K)] {
+          stage = iv_k % STAGES;
+          wait empty[stage];
+          tma.copy.async<full[stage]>.swiz<32>
+            lhs_packed.subspan(SPMM_WARP_M,
+              SPMM_PACKED_TILE_K).at(block_m, iv_k)
+            => lhs_s.subspan(SPMM_WARP_M,
+              SPMM_PACKED_TILE_K).at(stage, 0);
+          trigger full[stage];
+        }
       }
-      dma.copy l2_out
-        => output.chunkat(p, q);
+      inthreads.async (p1 == 1) {
+        mc = mma.fill.f16 0.0f;
+        foreach {iv_k} in [cdiv(K, SPMM_TILE_K)] {
+          wait full[iv_k % STAGES];
+          ma = mma.load.swiz<32>
+            lhs_s.at(iv_k % STAGES, 0);
+          mb = mma.load.swiz<64>
+            rhs_s.at(iv_k % STAGES, 0);
+          me = mma.load lhs_meta_s;
+          mma.row.row.sp mc, ma, mb, me;
+          trigger empty[iv_k % STAGES];
+        }
+        mma.store mc, output_s;
+        tma.copy output_s
+          => output.subspan(SPMM_WARP_M,
+             SPMM_WARP_N).at(block_m, block_n);
+      }
     }
   }
 }`,
   },
   {
-    label: "TMA Copy",
-    file: "tma_copy.co",
-    code: `__co__ auto tma_copy_tiled(
-    f32 [6, 16, 128] input) {
-  f32 [input.span] output;
+    label: "Fused MoE (FP8→BF16)",
+    file: "moe_gemm.co",
+    code: `__co__ void moe_gemm_kernel_bf16(
+    global f8_e4m3 [M, K] lhs,
+    global f32 [M, DIV_BLK_K] scale_a,
+    global f8_e4m3 [EXPERT_N, K] rhs,
+    global f32 [EXPERT_DIV_BLK_N, DIV_BLK_K] scale_b,
+    global s32 [EXPERTS1] expert_offsets,
+    global bf16 [M, N] output, stream s) {
 
-  parallel p by 32 : block {
-    f = tma.copy.async
-      input.chunkat(_, _, p) => shared;
-    wait f;
-    tma.copy f.data
-      => output.chunkat(_, _, p);
+  parallel.async {eid, block_n}
+    by [EXPERTS, cdiv(N, WARP_N)] : block
+  parallel by 1 : group-4
+  parallel t by 128 : thread {
+    shared f8_e4m3 [WARP_M, TILE_K] sA;
+    shared f8_e4m3 [WARP_N, TILE_K] sB;
+
+    s32 seg_start = expert_offsets.at(eid);
+    s32 seg_end   = expert_offsets.at(eid + 1);
+
+    foreach {iv_m} in [cdiv(seg_end-seg_start,
+                            WARP_M)] {
+      mc = mma.fill.f32 0.0f;
+      foreach {iv_k} in [cdiv(K, TILE_K)] {
+        dma.copy.swiz<128>.zfill
+          lhs.view(WARP_M, TILE_K)
+            .from(seg_start + iv_m*WARP_M,
+                  iv_k*TILE_K) => sA;
+        tma.copy.swiz<128>
+          rhs.subspan(WARP_N, TILE_K)
+            .at(eid # block_n, iv_k) => sB;
+        ma = mma.load.swiz<128> sA;
+        mb = mma.load.swiz<128> sB;
+        mma.row.row mc, ma, mb;
+        mma.scale mc,
+          scale_a.view(WARP_M, 1)
+            .from(seg_start+iv_m*WARP_M, iv_k),
+          scale_b.at(eid # block_n, iv_k);
+      }
+      mma.store mc, output.view(TILE_M, WARP_N)
+        .from(seg_start+iv_m*WARP_M,
+              block_n*WARP_N);
+    }
   }
-
-  return output;
 }`,
   },
   {
-    label: "LayerNorm",
-    file: "layernorm.co",
-    code: `__co__ void layernorm(
-    f32[N, M] X,
-    f32[M] gamma, f32[M] beta,
-    f32[N, M] Y, f32 eps) {
+    label: "Persistent Hilbert GEMM",
+    file: "matmul_hilbert.co",
+    code: `// Persistent kernel with Hilbert curve
+// tile scheduling for L2 cache locality
+__co__ void matmul(
+    global f16 [M, K] lhs,
+    global f16 [N, K] rhs,
+    global f16 [M, N] output,
+    global s32 [T] schedule_m,
+    global s32 [T] schedule_n) {
 
-  parallel p by N {
-    local = dma.copy
-      X.chunkat(p, _) => shared;
-    wait local;
+  int total_tiles = cdiv(M, WARP_M)
+                  * cdiv(N, WARP_N);
 
-    call norm_kernel(local.data,
-      gamma, beta, Y.chunkat(p, _),
-      eps, M);
+  parallel block_id by NUM_SMS : block {
+    shared f16 [WARP_M, TILE_K] lhs_s;
+    shared f16 [WARP_N, TILE_K] rhs_s;
+    shared f16 [WARP_M, WARP_N] out_s;
+
+    foreach {tile_iter}
+        in [cdiv(total_tiles, NUM_SMS)] {
+      tile_id = tile_iter # block_id;
+      if (tile_id < total_tiles) {
+        int bm = schedule_m.at(tile_id);
+        int bn = schedule_n.at(tile_id);
+        mc = mma.fill.f16 0.0f;
+        foreach {iv_k} in [cdiv(K, TILE_K)] {
+          tma.copy.swiz<128>
+            lhs.subspan(WARP_M, TILE_K)
+              .at(bm, iv_k) => lhs_s;
+          tma.copy.swiz<128>
+            rhs.subspan(WARP_N, TILE_K)
+              .at(bn, iv_k) => rhs_s;
+          parallel p by 1 : group-4 {
+            ma = mma.load.swiz<128> lhs_s;
+            mb = mma.load.swiz<128> rhs_s;
+            mma.row.row mc, ma, mb;
+          }
+        }
+        mma.store mc, out_s;
+        tma.copy out_s
+          => output.subspan(WARP_M, WARP_N)
+               .at(bm, bn);
+      }
+    }
   }
 }`,
   },
 ];
 
-function TypeWriter({ text, speed = 18, onDone }: { text: string; speed?: number; onDone?: () => void }) {
-  const [displayed, setDisplayed] = useState("");
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    setDisplayed("");
-    setDone(false);
-    let i = 0;
-    const interval = setInterval(() => {
-      i++;
-      setDisplayed(text.slice(0, i));
-      if (i >= text.length) {
-        clearInterval(interval);
-        setDone(true);
-        onDone?.();
-      }
-    }, speed);
-    return () => clearInterval(interval);
-  }, [text, speed, onDone]);
-
-  return (
-    <>
-      {displayed}
-      {!done && <span className="inline-block w-[2px] h-[1.1em] bg-mint-400 animate-cursor-blink align-middle ml-[1px]" />}
-    </>
-  );
-}
-
 export function Hero() {
   const t = useTranslations("hero");
   const [activeTab, setActiveTab] = useState(0);
-  const [isTyping, setIsTyping] = useState(true);
 
   const handleTabChange = useCallback((idx: number) => {
     setActiveTab(idx);
-    setIsTyping(true);
-  }, []);
-
-  const handleTypingDone = useCallback(() => {
-    setIsTyping(false);
   }, []);
 
   return (
@@ -180,7 +230,7 @@ export function Hero() {
             </a>
           </motion.div>
 
-          {/* Interactive code showcase */}
+          {/* Interactive code showcase with syntax highlighting */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -188,7 +238,6 @@ export function Hero() {
             className="mt-16 w-full max-w-4xl"
           >
             <div className="rounded-xl border bg-[var(--card)] overflow-hidden shadow-2xl shadow-black/5 dark:shadow-black/40">
-              {/* Tab bar */}
               <div className="flex items-center border-b bg-[var(--muted)]">
                 <div className="flex items-center gap-1.5 px-4 py-3">
                   <span className="w-3 h-3 rounded-full bg-red-400/80" />
@@ -212,53 +261,28 @@ export function Hero() {
                 </div>
               </div>
 
-              {/* Code area */}
-              <div className="relative p-5 min-h-[380px] sm:min-h-[420px] font-mono text-[13px] leading-[1.7] overflow-x-auto">
+              <div className="relative p-5 min-h-[420px] sm:min-h-[460px] font-mono overflow-x-auto">
                 <AnimatePresence mode="wait">
-                  <motion.pre
+                  <motion.div
                     key={activeTab}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="text-[var(--foreground)]"
                   >
-                    <code>
-                      <TypeWriter
-                        text={codeExamples[activeTab].code}
-                        speed={12}
-                        onDone={handleTypingDone}
-                      />
-                    </code>
-                  </motion.pre>
+                    <HighlightedCode code={codeExamples[activeTab].code} />
+                  </motion.div>
                 </AnimatePresence>
               </div>
 
-              {/* Bottom bar with badges */}
-              <AnimatePresence>
-                {!isTyping && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="flex flex-wrap items-center gap-2 px-5 py-3 border-t bg-[var(--muted)]/50"
-                  >
-                    {["Symbolic Shapes", "DMA Async", "Auto-Tiled", "Compile-Safe"].map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2.5 py-1 rounded-md text-xs font-medium
-                                   bg-mint-500/10 text-mint-600 dark:text-mint-400
-                                   border border-mint-500/20"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    <span className="ml-auto text-xs text-[var(--muted-foreground)]">
-                      {codeExamples[activeTab].label}
-                    </span>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-t bg-[var(--muted)]/50">
+                <span className="text-xs font-medium text-[var(--muted-foreground)]">
+                  {codeExamples[activeTab].label}
+                </span>
+                <span className="ml-auto text-xs text-[var(--muted-foreground)]">
+                  Real production kernel from choreo repository
+                </span>
+              </div>
             </div>
           </motion.div>
         </div>
