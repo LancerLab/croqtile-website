@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "product": "产品",
+    "tutorials": "教程",
+    "docs": "文档",
+    "changelog": "更新日志",
+    "blog": "博客",
+    "getStarted": "开始使用",
+    "github": "GitHub"
+  },
+  "hero": {
+    "tagline": "面向 GPU 编程的 TileFlow 语言",
+    "subtitle": "更少的代码，更多的安全检查，更快地交付 GPU 内核。",
+    "cta": "开始使用",
+    "learnMore": "了解更多"
+  },
+  "features": {
+    "easyToUse": {
+      "title": "简单易用",
+      "subtitle": "用更少的代码实现更多",
+      "description": "仅需等效 CUDA 代码的 40%。零成本的高级抽象，比 Triton 更高层。直接操作张量，而非缓冲区。",
+      "point1": "直接操作张量，而非原始缓冲区",
+      "point2": "避免硬件编程的复杂性 — TMA、DMA、tensor-core",
+      "point3": "让并行程序更容易编写和理解",
+      "point4": "与 cutlass、CUTE 或任何 C++ 库无缝集成"
+    },
+    "safety": {
+      "title": "编译时安全检查",
+      "subtitle": "在运行前捕获错误",
+      "description": "强大的编译时代码安全检查能够发现 tiling 不匹配问题，避免低级 CUDA 内核编程中难以调试的问题。",
+      "point1": "在编译时检测 tiling 不匹配",
+      "point2": "启用激进的运行时检查以简化调试",
+      "point3": "消除整类 DMA 相关的错误"
+    },
+    "dynamic": {
+      "title": "动态形状",
+      "subtitle": "符号维度，零样板代码",
+      "description": "首个在低级 CUDA 内核编程中允许共享（暂存）内存动态化的系统。统一支持静态和运行时内存。",
+      "point1": "一流的符号维度支持",
+      "point2": "无需样板代码的动态共享内存",
+      "point3": "统一的静态和运行时内存支持"
+    },
+    "ai": {
+      "title": "为 AI 调优而生",
+      "subtitle": "语言与机器智能的结合",
+      "description": "紧凑的语法和更短的代码行数为 AI 提供出色的上下文。高度优化的编译器消息让 AI 轻松理解和迭代。",
+      "point1": "紧凑语法完美适配 AI 上下文窗口",
+      "point2": "将易错配置隐藏在简单原语之后",
+      "point3": "CLI 工具和参数为 AI 代理完善文档",
+      "point4": "编译时检查防范 AI 容易混淆的错误"
+    }
+  },
+  "footer": {
+    "product": "产品",
+    "resources": "资源",
+    "community": "社区",
+    "company": "公司",
+    "copyright": "© {year} Croktile. 保留所有权利。",
+    "tutorials": "教程",
+    "docs": "文档",
+    "changelog": "更新日志",
+    "blog": "博客",
+    "github": "GitHub",
+    "discord": "Discord",
+    "about": "关于",
+    "contact": "联系我们"
+  },
+  "common": {
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式",
+    "language": "语言"
+  }
+}

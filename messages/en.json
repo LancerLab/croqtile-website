@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "product": "Product",
+    "tutorials": "Tutorials",
+    "docs": "Docs",
+    "changelog": "Changelog",
+    "blog": "Blog",
+    "getStarted": "Get Started",
+    "github": "GitHub"
+  },
+  "hero": {
+    "tagline": "The TileFlow Language for GPU Programming",
+    "subtitle": "Write less code. Catch more bugs. Ship faster GPU kernels.",
+    "cta": "Get Started",
+    "learnMore": "Learn More"
+  },
+  "features": {
+    "easyToUse": {
+      "title": "Easy to Use",
+      "subtitle": "Start with less, achieve more",
+      "description": "40% of equivalent CUDA code. Zero-cost high-level abstractions higher than Triton. Work on tensors, not buffers.",
+      "point1": "Work on tensors rather than raw buffers",
+      "point2": "Avoid the complexity of HW programming — TMA, DMA, tensor-core",
+      "point3": "Make parallel programs easier to write and reason about",
+      "point4": "Seamless C++ integration with cutlass, CUTE, or any C++ library"
+    },
+    "safety": {
+      "title": "Compile-Time Safety",
+      "subtitle": "Catch bugs before they run",
+      "description": "Strong compile-time code safety checks address tiling mismatches and avoid hard-to-debug issues in low-level CUDA kernel programming.",
+      "point1": "Detect tiling mismatches at compile time",
+      "point2": "Enable aggressive runtime checks for easier debugging",
+      "point3": "Eliminate entire classes of DMA-related bugs"
+    },
+    "dynamic": {
+      "title": "Dynamic Shapes",
+      "subtitle": "Symbolic dimensions, zero boilerplate",
+      "description": "First system to allow shared (scratchpad) memory to be dynamic in low-level CUDA kernel programming. Static and runtime memory support.",
+      "point1": "First-class symbolic dimension support",
+      "point2": "Dynamic shared memory without boilerplate",
+      "point3": "Static and runtime memory support unified"
+    },
+    "ai": {
+      "title": "Born for AI Tuning",
+      "subtitle": "Language meets machine intelligence",
+      "description": "Compact syntax and short LoC create great context for AI. Highly optimized compiler messages let AI easily understand and iterate.",
+      "point1": "Compact syntax perfect for AI context windows",
+      "point2": "Hidden error-prone configs behind simple primitives",
+      "point3": "CLI tools and arguments well-documented for AI agents",
+      "point4": "Compile-time checks guard against AI-confusing bugs"
+    }
+  },
+  "footer": {
+    "product": "Product",
+    "resources": "Resources",
+    "community": "Community",
+    "company": "Company",
+    "copyright": "© {year} Croktile. All rights reserved.",
+    "tutorials": "Tutorials",
+    "docs": "Documentation",
+    "changelog": "Changelog",
+    "blog": "Blog",
+    "github": "GitHub",
+    "discord": "Discord",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "common": {
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "language": "Language"
+  }
+}
