@@ -8,6 +8,7 @@ jest.mock("framer-motion", () => ({
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
   AnimatePresence: ({ children }: any) => children,
+  useReducedMotion: () => false,
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -26,14 +27,14 @@ describe("FeatureEasyToUse", () => {
 
   it("renders code comparison labels", () => {
     renderWithProviders(<FeatureEasyToUse />);
-    expect(screen.getByText(/Croktile — 12 lines/)).toBeInTheDocument();
-    expect(screen.getByText(/CUDA — 18 lines/)).toBeInTheDocument();
+    expect(screen.getAllByText("Croktile").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Triton").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the LoC comparison bar chart", () => {
     renderWithProviders(<FeatureEasyToUse />);
-    expect(screen.getByText("CUTE")).toBeInTheDocument();
-    expect(screen.getByText("CUDA")).toBeInTheDocument();
+    expect(screen.getByText("CROKTILE")).toBeInTheDocument();
+    expect(screen.getByText(/Lines of code/)).toBeInTheDocument();
   });
 
   it("renders all 4 feature points", () => {

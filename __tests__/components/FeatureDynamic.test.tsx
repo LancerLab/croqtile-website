@@ -8,6 +8,7 @@ jest.mock("framer-motion", () => ({
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
   AnimatePresence: ({ children }: any) => children,
+  useReducedMotion: () => false,
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -31,8 +32,8 @@ describe("FeatureDynamic", () => {
     expect(screen.getByText("K")).toBeInTheDocument();
   });
 
-  it("renders the code example file tab", () => {
+  it("renders shape picker", () => {
     renderWithProviders(<FeatureDynamic />);
-    expect(screen.getByText("dynamic_matmul.co")).toBeInTheDocument();
+    expect(screen.getByText(/Pick a shape/)).toBeInTheDocument();
   });
 });

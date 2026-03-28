@@ -7,6 +7,7 @@ jest.mock("framer-motion", () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
+  useReducedMotion: () => false,
 }));
 
 jest.mock("@/i18n/routing", () => ({
@@ -40,7 +41,7 @@ describe("BottomCTA", () => {
 
   it("renders GitHub link", () => {
     renderWithProviders(<BottomCTA />);
-    const ghLink = screen.getByText("GitHub");
+    const ghLink = screen.getByText("View on GitHub");
     expect(ghLink.closest("a")).toHaveAttribute("href", "https://github.com/LancerLab/croktile");
     expect(ghLink.closest("a")).toHaveAttribute("target", "_blank");
   });

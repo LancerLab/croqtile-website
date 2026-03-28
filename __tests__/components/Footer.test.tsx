@@ -26,8 +26,8 @@ function renderWithProviders(ui: React.ReactElement) {
 describe("Footer", () => {
   it("renders the croktile brand", () => {
     renderWithProviders(<Footer />);
-    expect(screen.getByText("crok")).toBeInTheDocument();
-    expect(screen.getByText("tile")).toBeInTheDocument();
+    expect(screen.getByText("Crok")).toBeInTheDocument();
+    expect(screen.getByText("Tile")).toBeInTheDocument();
   });
 
   it("renders footer navigation links", () => {

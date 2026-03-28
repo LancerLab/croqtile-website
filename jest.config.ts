@@ -39,6 +39,7 @@ const esmPackages = [
   "stringify-entities",
   "character-entities-html4",
   "character-entities-legacy",
+  "markdown-extensions",
 ].join("|");
 
 const config: Config = {

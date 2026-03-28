@@ -8,6 +8,7 @@ jest.mock("framer-motion", () => ({
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
   AnimatePresence: ({ children }: any) => children,
+  useReducedMotion: () => false,
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -24,14 +25,14 @@ describe("FeatureSafety", () => {
     expect(screen.getByText("Compile-Time Safety")).toBeInTheDocument();
   });
 
-  it("renders compile error demo", () => {
+  it("renders compile check toggle", () => {
     renderWithProviders(<FeatureSafety />);
-    expect(screen.getByText("Compile-time errors caught")).toBeInTheDocument();
+    expect(screen.getByText(/Compile-time/)).toBeInTheDocument();
   });
 
-  it("renders runtime check demo", () => {
+  it("renders runtime check toggle", () => {
     renderWithProviders(<FeatureSafety />);
-    expect(screen.getByText("Runtime checks passed")).toBeInTheDocument();
+    expect(screen.getByText(/Runtime/)).toBeInTheDocument();
   });
 
   it("renders all 3 safety points", () => {

@@ -4,6 +4,10 @@ import { NextIntlClientProvider } from "next-intl";
 import { ThemeProvider } from "next-themes";
 import messages from "../../messages/en.json";
 
+jest.mock("next/navigation", () => ({
+  usePathname: () => "/en",
+}));
+
 jest.mock("@/i18n/routing", () => ({
   useRouter: () => ({ replace: jest.fn() }),
   usePathname: () => "/",
@@ -36,9 +40,9 @@ describe("Navbar", () => {
     expect(screen.getByText("Blog")).toBeInTheDocument();
   });
 
-  it("renders the Get Started button", () => {
+  it("renders the GitHub button", () => {
     renderWithProviders(<Navbar />);
-    expect(screen.getByText("Get Started")).toBeInTheDocument();
+    expect(screen.getByText("GitHub")).toBeInTheDocument();
   });
 
   it("renders the logo", () => {

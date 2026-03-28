@@ -20,6 +20,7 @@ jest.mock("framer-motion", () => ({
     p: ({ children, ...props }: any) => <p {...props}>{children}</p>,
   },
   AnimatePresence: ({ children }: any) => children,
+  useReducedMotion: () => false,
 }));
 
 function renderWithProviders(ui: React.ReactElement) {
@@ -44,16 +45,16 @@ describe("Hero", () => {
   it("renders CTA buttons", () => {
     renderWithProviders(<Hero />);
     expect(screen.getByText(messages.hero.cta)).toBeInTheDocument();
-    expect(screen.getByText(messages.hero.learnMore)).toBeInTheDocument();
+    expect(screen.getByText("View on GitHub")).toBeInTheDocument();
   });
 
   it("renders the code demo", () => {
     renderWithProviders(<Hero />);
-    expect(screen.getByText("matmul.co")).toBeInTheDocument();
+    expect(screen.getByText("gemm_sp_e4m3.co")).toBeInTheDocument();
   });
 
-  it("renders TileFlow badge", () => {
+  it("renders the badge", () => {
     renderWithProviders(<Hero />);
-    expect(screen.getByText("TileFlow Programming Paradigm")).toBeInTheDocument();
+    expect(screen.getByText(/Open Source/)).toBeInTheDocument();
   });
 });
