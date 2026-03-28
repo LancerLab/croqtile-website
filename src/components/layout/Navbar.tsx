@@ -45,9 +45,9 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <img
-              src="/favicon.svg"
+              src="/logo-mascot.png"
               alt="Croktile"
-              className="h-8 w-8 rounded-md"
+              className="h-9 w-9 rounded-md object-contain"
             />
             <span className="text-lg font-bold tracking-tight">
               <span className="text-mint-500">Crok</span>

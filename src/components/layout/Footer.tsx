@@ -37,9 +37,9 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5">
               <img
-              src="/favicon.svg"
+              src="/logo-mascot.png"
               alt="Croktile"
-              className="h-7 w-7 rounded-md"
+              className="h-8 w-8 rounded-md object-contain"
               />
               <span className="text-lg font-bold tracking-tight">
                 <span className="text-mint-500">Crok</span>Tile

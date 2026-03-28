@@ -261,7 +261,7 @@ export function Hero() {
                 </div>
               </div>
 
-              <div className="relative p-5 h-[340px] sm:h-[380px] font-mono overflow-x-auto overflow-y-auto">
+              <div className="relative p-5 h-[480px] sm:h-[540px] font-mono overflow-x-auto overflow-y-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}

@@ -22,9 +22,9 @@ export function BottomCTA() {
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
           <img
-            src="/favicon.svg"
+            src="/logo-mascot.png"
             alt="Croktile mascot"
-            className="mx-auto h-20 w-20 mb-8"
+            className="mx-auto h-24 w-24 mb-8 rounded-xl object-contain"
           />
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
             Try <span className="text-gradient">Croktile</span> today.

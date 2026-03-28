@@ -74,7 +74,7 @@ const mdxComponents = {
     if (typeof props.children === "string" && !props.className) {
       return (
         <code
-          className="px-1.5 py-0.5 rounded-md bg-mint-100/50 dark:bg-mint-900/20 text-mint-800 dark:text-mint-300 text-[0.875em] font-mono border border-mint-200/50 dark:border-mint-800/30"
+          className="px-1.5 py-0.5 rounded-md bg-amber-100/70 dark:bg-amber-900/25 text-amber-900 dark:text-amber-200 text-[0.875em] font-mono border border-amber-200/60 dark:border-amber-700/40"
           {...props}
         />
       );
