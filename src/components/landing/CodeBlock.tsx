@@ -9,7 +9,8 @@ type Props = {
 
 export function CodeBlock({
   code,
-  _language = "croktile",
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  language = "croktile",
   filename,
   highlights = [],
 }: Props) {
