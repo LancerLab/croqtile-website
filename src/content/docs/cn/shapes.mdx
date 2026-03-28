@@ -1,0 +1,39 @@
+---
+title: "形状数据操作"
+description: "形状、span 与符号化维度概览。"
+order: 2
+---
+
+## 形状声明
+
+在 Croktile 中，数据类型直接携带形状信息：
+
+```cpp
+f32 [8, 4, 12] shaped_data;
+```
+
+这声明了一个形状为 `[8, 4, 12]` 的三维 32 位浮点张量。
+
+## 形状操作
+
+Croktile 通过 `span` 提供强大的形状操作：
+
+```cpp
+new_shape : shaped_data.span { (0)/2, (1)/4, 1, (2) };
+```
+
+这会从原始数据按分块因子 `{2, 4, 1}` 创建新形状，并增加一个额外维度。
+
+## 符号化维度
+
+对动态形状可使用符号化维度：
+
+```cpp
+__co__ auto matmul(f32 [M, K] lhs, f32 [N, K] rhs) {
+  // M, N, K resolved at runtime
+  f32 [M, N] output;
+  return output;
+}
+```
+
+符号化维度会在编译期自动进行一致性检查。

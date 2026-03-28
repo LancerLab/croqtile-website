@@ -1,0 +1,87 @@
+---
+title: "宏与预处理"
+description: "define、ifdef、预处理器与 C++ 交互。"
+order: 11
+---
+
+## 概述
+
+宏长期以来是 C/C++ 的基础能力。为同时灵活处理 C++ 与 *tileflow* 程序，宏展开必不可少。本节介绍 Croktile 的宏处理能力。
+
+## 类似对象的宏（Object-Like Macros）
+
+Croktile 预处理器支持 C/C++ 的**类似对象的宏**，用于衔接主机代码与 tileflow 代码。*类似对象的宏*做纯文本替换，不接受参数。下例说明：
+
+```cpp
+#define M 256
+#define N 32
+#define K 64
+
+__co__ auto matmul(f32 [M, N] lhs, f32 [N, K] rhs) { /*...*/ }
+
+void foo() {
+  croktile::f32 a[M][K];
+  croktile::f32 b[N][K];
+  // ...
+  auto res = matmul(croktile::make_spanview<2>(a, {M, K}),
+                    croktile::make_spanview<2>(b, {N, K}));
+}
+
+```
+
+片段中，Croktile 函数 `matmul` 的输入并非动态形状；Croktile 预处理器在 Croktile 编译之前将 `M`、`N`、`K` 替换为 `256`、`32`、`64`，从而得到静态形状的 tileflow 函数。这样便于保持多段代码一致、易于维护。
+
+注意：目前 Croktile**不支持**带参数的宏，因此如下代码：
+
+```cpp
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+```
+
+无法按预期工作。
+
+## 注释
+
+Croktile 支持 C 风格注释，包括 `/*...*/` 与 `//...`，依托 Croktile 预处理器提供的能力。
+
+## 条件编译
+
+Croktile 也支持 C/C++ 常用的条件编译，包括 `#if` / `#ifdef` / `#ifndef` / `#else` / `#endif`。下例展示用法：
+
+```cpp
+#define PATH0
+// some host code
+__co__ foo() {
+#ifdef PATH0
+// some code related to PATH0
+#else
+// other code
+#endif
+}
+
+// host control
+#ifdef PATH0
+// ...
+#else
+// ...
+#endif
+```
+
+这样主机与 Croktile 代码可在同一套预处理流程下受控。
+
+注意：Croktile 预处理器能力仍在增强；但很可能不会实现完整的 C 预处理。除非确有必要，Croktile 不会照搬所有既有 C 特性。
+
+## 与 C++ 预处理的差异
+
+关于 Croktile 预处理，有一点很重要：**它比 C++ 预处理更早触发**。Croktile 编译流程大致如下：
+
+```
+croktile-preprocessing -> croktile compilation -> c/c++ preprocessing -> c/c++ compilation
+```
+
+主要目标是让主机/设备宏在整体上协同工作，但该流程有时会导致行为差异。从实现上看，Croktile 预处理器只替换/条件编译 tileflow 函数内部的代码，其余预处理仍交给 C++ 预处理器，从而把 Croktile 预处理限制在较小范围内。
+
+## 预定义宏
+
+为模拟目标原生编译环境，Croktile 预处理也会从目标继承内建宏。例如生成 CUDA/Cute 代码时全局定义 `__CUDA__`，而 `__CUDA_ARCH__` 仅在 CUDA/Cute 设备代码编译时设置。
+
+因此这些宏既可在 tileflow 函数内使用，也可在主机代码中使用。

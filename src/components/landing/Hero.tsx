@@ -216,7 +216,7 @@ export function Hero() {
               {t("cta")}
             </Link>
             <a
-              href="https://github.com/codes1gn/croktile"
+              href="https://github.com/LancerLab/croktile"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3.5 text-sm font-semibold border rounded-xl
@@ -261,7 +261,7 @@ export function Hero() {
                 </div>
               </div>
 
-              <div className="relative p-5 min-h-[340px] sm:min-h-[380px] font-mono overflow-x-auto">
+              <div className="relative p-5 h-[340px] sm:h-[380px] font-mono overflow-x-auto overflow-y-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}

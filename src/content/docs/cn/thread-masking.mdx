@@ -1,0 +1,153 @@
+---
+title: "线程掩码"
+description: "inthreads、掩码与异步 inthreads。"
+order: 7
+---
+
+## 概述
+
+虽然 Croktile 主要面向 SPMD（单程序多数据）编程，它也通过线程掩码支持 MPMD（多程序多数据）执行。本节展示如何在 Croktile 中使用 `inthreads` 块编写发散代码。
+
+## 掩码并行线程
+
+### SPMD 中的掩码
+
+在 SPMD 编程中，通常需要**掩掉**部分*并行线程*。例如，程序员常把数据分成块做并行或迭代处理，但可能有余数无法在所有线程间均匀分配。此时，对部分线程做掩码是在保持正确性的同时利用并行硬件的恰当做法。
+
+上图展示了 13 个数据块的一种分块：每次迭代用 4 个并行线程处理各块。处理全部数据块需要 4 次迭代；但在最后一次迭代中，只有 *thread-0* 需要工作。你可以看到各次迭代的**线程掩码**为 `1111`，最后一次为 `1000`。线程掩码是一串布尔位，`1` 表示**活跃**，`0` 表示**非活跃**。因此本例中只有 *thread-0* 被设为*活跃*，以避免最后一次迭代中不必要的数据块处理。
+
+### 一致与发散
+
+掩码是实现层面的概念。从 SPMD 编程角度看，我们常说处理数据块的代码**发散**，因为掩码导致并非所有线程实例执行相同路径。程序员应意识到，其 SPMD 代码由以下两部分组成：
+
+- **一致代码（Uniform Code）**：*所有线程*走同一路径。
+- **发散代码（Divergent Code）**：只有*被掩码选中的线程*执行*发散*路径。
+
+在 SPMD 中需要*发散*代码才能应对不同实际需求；从另一种范式看，在 SPMD 程序中使用*发散*代码甚至可以在概念上模拟 MPMD（多程序多数据）行为——在 MPMD 中不同线程执行不同代码。因此，*发散*可在概念上把 SPMD 扩展到 MPMD 范围。
+
+在 Croktile 中，可通过 `inthreads` 块创建发散代码。下面展开说明。
+
+## `inthreads`：用线程掩码写发散代码
+
+### Tileflow 程序的并行视角
+
+在 Croktile 中，*发散*代码区由关键字 `inthreads` 生成，其后跟一个比较表达式。
+
+请看下例：
+
+```cpp
+__co__  void foo() {
+  // sequential code
+
+  // start of the SPMD code region
+  parallel p by 6 {
+    // some uniform code for all threads
+    // ...
+    inthreads (p <= 2) {
+      // divergent code for thread 0, 1, 2 (thread-mask: 000111)
+    }
+    // threads are forced to be synchronized
+    // some uniform code for all threads
+    // ...
+  }
+  // end of the SPMD code region
+
+  // sequential code
+}
+```
+
+你现在可以从并行角度重新审视 Croktile 的 tileflow 程序，它由以下部分组成：
+
+- *顺序代码*
+- 包在 `parallel-by` 块中的 *SPMD 风格并行代码*，其中包含：
+    - *一致代码*
+    - 包在 `inthreads` 块中的 *发散代码*
+
+本例中，`p <= 2` 启动*发散代码块*；从实现上看，它生成线程掩码 `000111`，只允许线程 `0`、`1`、`2` 执行内部代码，线程 `3`、`4`、`5` 会跳过该路径。**`inthreads` 块结束后，所有线程被强制同步**。此处意味着线程 `3`、`4`、`5` 在继续前会等待其他线程完成。
+
+在 Croktile 中，`inthreads` 块看起来像 C/C++ 的 `if`。但 `inthreads` 明确表达的是 SPMD 中的代码*发散*，而不是顺序代码的条件分支。因此 `inthreads` 块：
+
+- 只能出现在 SPMD 区域中，即 `parallel-by` 块内。
+- 比较结果只能与线程标识相关。
+
+Croktile 编译器会对比较表达式以及 `inthreads` 块的位置做检查。
+
+### 异步化
+
+与 `parallel-by` 类似，可以让执行/不执行发散代码的线程异步运行。下面示例在 SPMD 代码中演示一种 MPMD 式执行：
+
+```cpp
+__co__  void foo() {
+  parallel p by 6 {
+    inthreads.async (p <= 2) {
+      // divergent code for thread 0, 1, 2 (thread-mask: 000111)
+    }
+    inthreads.async (p > 2) {
+      // divergent code for thread 3, 4, 5 (thread-mask: 111000)
+    }
+    sync.shared; // sync point
+                 // all 'inthreads' paths must get executed
+  }
+}
+```
+
+本例将并行线程均分为两组子组，且不在每个 `inthreads` 块后强制同步。这样不同组中的线程可并行执行，模拟 MPMD。但 `sync.shared` 为所有线程建立**同步点**，保证两条路径的代码在该*同步点*之后都已执行。
+
+注意：只有**外层**的 `inthreads` 可声明为异步。若对任意内层 `inthreads` 使用 `inthreads.async`，会在编译期报错。
+
+## 多层级掩码
+
+线程掩码可作用于不同并行层级。下例演示这一点：
+
+```cpp
+__co__  void foo() {
+  parallel p by 3, q by 4 {
+    inthreads (p < 2 && q == 0) {
+      // divergent code for thread (0, 0), (1, 0)
+      // thread-mask: 011-0001
+    }
+    inthreads (q == 1) {
+      // divergent code for thread (0, 1), (1, 1), (2, 1)
+      // thread-mask: 111-0010
+    }
+  }
+}
+```
+
+该代码使用两层并行：
+
+- 外层（`p`）：并行数为 3
+- 内层（`q`）：并行数为 4
+
+第一个 `inthreads` 谓词（`p < 2 && q == 0`）将执行限制为：
+
+- 外层并行 ID：`0, 1`（不含 2）
+- 内层并行 ID：仅 `0`
+
+线程掩码（`011-0001`）反映上述约束，两层之间用连字符（-）分隔。
+
+第二个谓词（`q == 1`）不限制外层（`p`），允许所有外层 ID（`0, 1, 2`），仅将内层限制为 `q == 1`。
+
+## 隐式掩码
+
+在 Croktile 中，多层 `parallel-by` 之间的代码可视为一种隐式掩码。下例说明：
+
+```
+__co__  void foo() {
+  parallel p by 6 {
+    // implicit masking: 'inthreads (q == 0) { ... } '
+    parallel q by 2 {
+      // code here is for all threads
+    }
+    // implicit masking: 'inthreads (q == 0) { ... } '
+  }
+}
+```
+
+本例存在两层并行。位于 `parallel p by 6` 内、但在 `parallel q by 2` 块之外的代码，概念上只对应外层并行。这意味着子层并行中只有**一个**线程实例执行该段代码，等价于 `inthreads (q == 0) { ... }`。程序员须注意该段只有单一线程实例执行；只有内层 `parallel-by` 内的代码由所有线程执行。
+
+## 小结
+
+本节说明了线程掩码的动机：在 Croktile 的 SPMD 范式下实现 MPMD 风格的发散执行。开发者既可用 `inthreads` 做显式线程掩码，也可通过 `parallel-by` 结构隐式限制在特定线程上执行。
+
+线程掩码带来灵活性的同时，也会引入线程异步，使协调更复杂。下一节将探讨管理这些同步挑战的进阶技术。

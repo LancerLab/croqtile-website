@@ -1,0 +1,179 @@
+---
+title: "TileFlow 分块优化"
+description: "矩阵乘法与 rgb2gray 示例、chunkat 与 # 分块。"
+order: 12
+---
+
+# Croktile 中的分块优化
+
+本节通过若干实例，继续讨论 Croktile 中的分块（tiling）优化。
+
+## 示例 1：`matmul`
+
+第一个示例是设备程序上的矩阵乘法，展示 Croktile 的分块与内存管理机制如何协同优化矩阵运算，以及如何利用 DMA（直接内存访问）高效搬运数据。
+
+---
+
+### 示例代码：带分块的矩阵乘法
+
+```cpp
+__co__ s32 [512, 1024] matmul(s32 [512, 1024] lhs, s32 [1024, 1024] rhs) { 
+  // Device program
+  s32[lhs.span(0), rhs.span(1)] output; // Use same shape as lhs
+
+  parallel p by 1 {
+    with index = {m_tile, k_tile, n_tile} in [1, 1, 1] {
+      foreach m_tile, n_tile {
+        shared s32[512, 1024] l2_out;
+        foreach k_tile {
+          // Initiate DMA operations
+          lhs_load = dma.copy.async lhs.chunkat(m_tile, k_tile) => shared;
+          rhs_load = dma.copy.async rhs.chunkat(k_tile, n_tile) => shared;
+
+          parallel q by 1 {
+            with index = {m_tile_s, k_tile_s, n_tile_s} in [4, 4, 8] {
+              // Local buffers for tiling
+              local s32 [128, 256] lhs_load_s_buffer_0 {0}, lhs_load_s_buffer_1 {0};
+              local s32 [256, 128] rhs_load_s_buffer_0 {0}, rhs_load_s_buffer_1 {0};
+              foreach index {
+                // Add "after" primitive to chain up paired DMA operations
+                lhs_load_s = dma.copy.async lhs_load.data.chunkat(m_tile_s, k_tile_s) => select(k_tile_s % 2, lhs_load_s_buffer_0, lhs_load_s_buffer_1) after lhs_load;
+                rhs_load_s = dma.copy.async rhs_load.data.chunkat(k_tile_s, n_tile_s) => select(k_tile_s % 2, rhs_load_s_buffer_0, rhs_load_s_buffer_1) after rhs_load;
+                out_load_s = dma.copy.async l2_out.chunkat(m_tile_s, n_tile_s) => local;
+                wait out_load_s;
+
+                // Perform the matrix multiplication (dot product) operation
+                call dot_general_fp32(lhs_load_s.data, rhs_load_s.data, 256, 256, 256, 0, 8, out_load_s.data);
+
+                // Store the result back to l2_out
+                out_store_s = dma.copy.async out_load_s.data => l2_out.chunkat(m_tile_s, n_tile_s); 
+              }
+            }
+          }
+
+          // Add "after" primitive to chain up DMA operations for the final output
+          out_store = dma.copy.async l2_out => output.chunkat(m_tile, n_tile) after out_store_s;
+        }
+      }
+    }
+  }
+  return output;
+}
+```
+
+---
+
+### 使用 `chunkat` 做内存分块
+
+在矩阵乘法示例中，**内存分块**通过 `chunkat` 方法实现：将输入矩阵 `lhs`（左操作数）与 `rhs`（右操作数）切成更小的块并行处理。
+
+##### 通过 `chunkat` 分块：
+
+- `lhs` 与 `rhs` 使用 `chunkat` 分块；块由 `m_tile`、`k_tile`、`n_tile` 等界定，对应乘法涉及的不同维度。
+- 两个矩阵的块通过 `dma.copy.async` **异步**加载到**共享内存**（`lhs_load` 与 `rhs_load`）。该操作把矩阵的一部分从**全局内存**搬到**共享内存**，是大矩阵运算中常见的优化，有利于数据局部性。
+
+##### 有界变量：
+
+- `m_tile`、`k_tile`、`n_tile` 为**有界变量**，在 `parallel-by` 与 `with-in` 等结构中定义，刻画分块的迭代空间。
+- 这些有界变量使各块可并行计算，每个线程处理矩阵的不同切片，从而在多线程上高效完成矩阵乘法。
+
+## 示例 2：rgb2gray
+
+第二个示例是 RGB 转灰度：用加权平均把彩色（RGB）图像转为灰度图，展示物理并行与虚拟并行如何配合。
+
+---
+
+### 示例代码
+
+```cpp
+__co__ auto rgb2gray(f32 [N, 3, H, W] input) {
+  f32 [N, H, W] out;
+  parallel q by 6 {
+    with index={n, h, w} in [N, H, W]/{#q, 16, 512} {
+      foreach n, h, w {
+        // _ means no tiling
+        input_L1_A = dma.copy input.chunkat(q#n, _, h, w) => local;
+        dims : input_L1_A.span[(0), (2), (3)];
+        local f32 [dims] out_L1;
+        call rgb2gray_kernel_fp32_fp32(input_L1_A.data, out_L1, |out_L1|, 1);
+        dma.copy out_L1 => out.chunkat(q#n, h, w);
+      }
+    }
+  }
+  return out;
+}
+```
+
+---
+
+### 用 `#` 组合两个有界变量做分块
+
+上例需要以涉及**两个有界变量**的方式对矩阵分块，此时使用 **`#` 运算符**：计算两个有界变量的**笛卡尔积**（**不可交换**）。
+
+##### `#` 运算符：
+
+- 分块涉及四个有界变量：`q`、`n`、`h`、`w`，其上界分别为 `6`、`N/6`、`H/16`、`W/512`。
+- 设 `N` 为 18，`q` 表示物理线程索引。希望每个线程处理在第一维上连续的数据：第一个线程处理 `input[0~2][...]`，第二个处理 `input[3~5][...]`，依此类推。
+- `q # n` 会隐式产生新的有界变量，其上界为 `N`：即 `q` 的上界与 `n` 的上界相乘。
+- 每次数据搬运时，各维步长为 1、3、16、512；最后一维索引为 `w`；第一维索引为 `q * (n 的上界) + n`。
+
+##### 为何重要：
+
+- `q` 与 `n` 的组合使物理并行与虚拟并行能高效协同。
+- 有助于优化**访存模式**，尤其在大矩阵场景下，内存使用效率很关键。
+- Croktile 在此更贴近**物理内存层次**（如 GPU 或加速器上的 local/shared 内存）。与 TVM 等把数据搬运抽象掉的高层循环调度不同，Croktile 显式把**虚拟循环**与**物理 DMA 操作**联系起来，从而更高效地搬运与计算。
+
+## 虚拟并行与物理 DMA 映射
+
+在传统系统如 **TVM**（Tensor Virtual Machine）中，调度与循环变换被抽象出来以优化计算。例如矩阵乘法的典型 **TVM 调度**可能如下：
+
+```python
+# Example of TVM-style loop schedule
+s = tvm.create_schedule(A.op)
+xo, xi = s[A].split(A.op.axis[0], factor=64)
+yo, yi = s[A].split(A.op.axis[1], factor=64)
+s[A].bind(xo, tvm.thread_axis("blockIdx.x"))
+s[A].bind(yo, tvm.thread_axis("blockIdx.y"))
+s[A].bind(xi, tvm.thread_axis("threadIdx.x"))
+s[A].bind(yi, tvm.thread_axis("threadIdx.y"))
+```
+
+这里对矩阵 A 的计算拆成多组循环，轴按因子（如 64）切分；`bind` 把循环变量绑定到硬件线程，从而抽象并行。这在很多场景有效，但在特定内存层次或性能与底层硬件强绑定时存在局限。
+
+#### TVM 式调度中虚拟并行的局限
+
+在 TVM 的循环调度里，虚拟并行通过 `threadIdx`、`blockIdx` 等抽象映射到物理线程。但数据搬运的物理行为，尤其在复杂内存层次（local、shared、global 等）下，并未显式表达。TVM 隐藏了数据搬运细节，部分行为由系统按规则或优化自动决定。
+
+主要局限在于：物理行为与访存模式未必被充分优化，因为它们藏在抽象之后。系统在一般情形下可能表现不错，但在需要细粒度控制访存时（如高性能计算），未必能榨干硬件潜力。
+
+#### 留给系统的自由度
+
+在这种抽象里，大量关于内存与并行的决策交给系统的自动优化，包括：
+
+- 内存布局（数据放在 local、shared 还是 global），
+- DMA 操作（数据如何在各级内存间传递），
+- 并行线程映射（虚拟循环如何映射到物理线程）。
+
+这种自由度带来广泛的优化空间，但也把部分物理行为对用户隐藏：既是优点（系统可按启发式适配不同架构或运行条件），也是缺点（用户对并行如何落到硬件的控制变少，复杂访存与数据搬运模式下可能次优）。
+
+#### Croktile 中显式物理映射的重要性
+
+与 TVM 的抽象方式不同，Croktile **显式**表达虚拟并行（如 `parallel-by`、`with-in`、`foreach`）与物理内存操作（如 DMA、`chunkat`、内存限定符）。
+
+通过显式建模虚拟循环到物理 DMA 与内存层次的映射，访存模式更贴合底层硬件，便于细粒度管理内存，在 GPU 或定制加速器上往往能获得更好性能。
+
+#### Croktile 如何应对上述局限？
+
+在 Croktile 中，虚拟并行通过有界变量与循环（如 `parallel by`、`foreach`）清晰定义；物理行为（如通过 DMA 在内存层次间搬运）由用户直接控制并映射。
+
+虚拟并行与物理数据搬运之间的这种显式耦合，使用户在复杂场景下能更主动地调优，例如针对内存层次、缓存优化与数据局部性。
+
+在 **Croktile** 中，**DMA 操作**显式表示不同内存层级之间的数据移动，例如从 **DRAM**（主存）到 **SRAM**（片上存储），以及从 **SRAM** 到**寄存器**。对加速器（如 GPU）上的访存优化而言，这种显式控制很关键。做**分块（tiling）**时，**`#` 运算符**用于计算有界变量的**笛卡尔积**，从而对多维循环做分块并直接绑定到 **DMA 操作**，使**虚拟循环维度**（如 `m_tile`、`k_tile`、`n_tile`）与实际**物理内存事务**紧密对应。
+
+**`#` 运算符**将多个有界变量组合成**复合变量**，定义数据的 tiling 模式；由此改善缓存局部性、降低访存延迟。分块确定后，**DMA** 在合适时机把数据从 **DRAM** 搬到 **SRAM**，再从 **SRAM** 搬到**局部寄存器**。以矩阵乘法为例，**dma.copy.async** 把矩阵块加载到**共享内存（SRAM）**，再加载到**寄存器**参与计算；每个 **DMA** 与有界变量定义的分块模式一致，保证计算过程中访存高效。
+
+用于分块的 **`#` 运算符**可把多个**虚拟循环维度**直接映射到**内存操作**，相对 **TVM** 等隐藏内存与并行细节的系统是明显优势。这种**虚拟并行**到**物理 DMA** 的显式映射，使数据在内存层次间更高效流动。
+
+通过 **`#` 定义多维分块**并显式映射到 **DMA**，程序员可对访存做**细粒度控制**，改善局部性、降低延迟，使虚拟并行与物理硬件内存层次对齐，在加速器上获得**更好性能**。这种**显式内存分块**与 **DMA 控制**有助于发挥硬件潜力，而不像部分高层抽象那样限制对数据搬运的直接控制。
+
+本段在不使用子标题的前提下整合了上述要点，采用更紧凑、连贯的叙述便于阅读。

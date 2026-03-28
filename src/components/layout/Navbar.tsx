@@ -45,9 +45,9 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <img
-              src="/logo-mascot.png"
+              src="/favicon.svg"
               alt="Croktile"
-              className="h-9 w-auto rounded-lg"
+              className="h-8 w-8 rounded-md"
             />
             <span className="text-lg font-bold tracking-tight">
               <span className="text-mint-500">Crok</span>
@@ -75,7 +75,7 @@ export function Navbar() {
             <LangSwitch />
             <ThemeToggle />
             <a
-              href="https://github.com/codes1gn/croktile"
+              href="https://github.com/LancerLab/croktile"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex ml-2 px-4 py-2 text-sm font-medium

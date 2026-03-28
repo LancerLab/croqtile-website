@@ -16,8 +16,8 @@ export function generateStaticParams() {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+    { media: "(prefers-color-scheme: light)", color: "#f7fdf8" },
+    { media: "(prefers-color-scheme: dark)", color: "#090f0b" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: "/logo-mascot.png",
+        url: "/og-image.svg",
         width: 1200,
         height: 630,
         alt: "Croktile — The Next-Gen GPU & DSA Language. 5x Productivity.",
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     title: "Croktile — The Next-Gen GPU & DSA Language. 5x Productivity.",
     description:
       "The next-gen GPU & DSA language. 5x productivity over CUDA with zero-cost abstractions.",
-    images: ["/logo-mascot.png"],
+    images: ["/og-image.svg"],
   },
   robots: {
     index: true,
@@ -105,7 +105,7 @@ export default async function LocaleLayout({ children, params }: Props) {
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;600;700&display=swap"
           rel="stylesheet"
         />
       </head>

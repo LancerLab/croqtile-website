@@ -1,6 +1,7 @@
 import { getContentBySlug, getContentSlugs, getSidebarItems } from "@/lib/mdx";
 import { MdxContent } from "@/components/mdx/MdxContent";
 import { Sidebar } from "@/components/mdx/Sidebar";
+import { DocGrid } from "@/components/mdx/DocGrid";
 import { locales } from "@/i18n/config";
 
 export function generateStaticParams() {
@@ -34,17 +35,7 @@ export default async function DocsPage({ params }: Props) {
               Select a topic from the sidebar to get started.
             </p>
             {sidebarItems.length > 0 && (
-              <div className="mt-8 grid gap-3 sm:grid-cols-2">
-                {sidebarItems.map((item) => (
-                  <a
-                    key={item.slug}
-                    href={`/docs/${item.slug}`}
-                    className="block p-4 rounded-xl border hover:border-mint-500/50 hover:bg-[var(--muted)] transition-colors"
-                  >
-                    <span className="font-medium">{item.title}</span>
-                  </a>
-                ))}
-              </div>
+              <DocGrid items={sidebarItems} basePath="/docs" />
             )}
           </div>
         </div>

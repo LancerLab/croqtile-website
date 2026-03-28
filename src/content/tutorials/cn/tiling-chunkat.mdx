@@ -1,0 +1,90 @@
+---
+title: "使用 chunkat 进行分块"
+description: "ubound 操作符与 chunkat 表达式实现分块 DMA、多变量分块以及源端与目标端分块。"
+order: 11
+---
+
+## 概述
+在本节中，我们将介绍用于 DMA 语句的 *chunkat 表达式*，这是 Croktile 简化数据搬移编程的核心概念。
+
+## *Ubound* 操作
+在上一章中，我们了解到由 `parallel-by` 或 `with-in` 语句定义的*有界变量*是带有一个或多个边界的*整数*或 *ituple*。我们还学习了如何使用*有界变量*的*当前值*和*上界值*在 `foreach` 块中构造循环，其中*上界*被隐式使用。
+
+然而，在 Croktile 中，您可以使用 **ubound 操作**来显式获取有界变量的上界。*Ubound* 是一个一元操作，使用前缀符号 `#` 放在有界变量之前。例如：
+
+```choreo
+with size in [32] {
+  local u8 [#size, 16] a; // buffer shape: [32, 16]
+  local u8 [size, 16] b; // error in shape: [0, 16]
+}
+```
+
+在这段代码中，局部缓冲区 `a` 的形状为 `[32, 16]`，因为 `#size` 求值为 `size` 的上界。然而，`b` 的声明使用了 `size` 的*当前值*，导致了不正确的形状定义。
+
+## 使用 `chunkat` 表达式进行数据分块
+在上一节的所有示例中，*DMA 语句*的*数据表达式*直接使用了 *spanned* 数据或*存储*标注。然而，在实际编程中，程序员可以使用 **chunkat** 表达式来实现分块行为。例如：
+
+```choreo
+__co__ void foo(f32 [36] input) {
+  parallel p by 6 {
+    dma.copy input.chunkat(p) => shared;
+  }
+}
+```
+
+在这个示例中，内置成员函数 `.chunkat` 被用于为 DMA 语句的源表达式创建一个分块。每个分块在 Croktile 中被称为 **chunk**。`.chunkat(...)` 数据表达式可以看作是 `.chunk(...).at(...)` 的简写形式，其中各部分的语义如下图所示：
+
+![Croktile-Structure-Chunkat](/tutorials/figures/chunkat.png)
+
+考虑表达式 `input.chunkat(p)`，它等价于 `input.chunk(#p).at(p)`：
+
+- `input` 是要被分块的 *spanned 数据*。
+- `#p` 表示**分块因子（tiling factor）**。它还指定了每个维度需要处理的 **chunk 总数**。在这个例子中，一维输入被分成 `6` 块，因此有 `6` 个 chunk 需要处理。
+- `.chunk(#p)` 决定了 **chunk 的形状**。chunk 是从 `input` 中分出的一维数据段，其大小为数据的 *mdspan* 除以有界变量的*上界*。在本例中，chunk 形状计算为 `[input.span / #p] = [6]`。
+- `.at(p)` 决定了 **chunk 的索引**。这里 `p` 的范围是 `[0, 6)`，允许并行线程处理 `input` 的不同 chunk。具体来说，并行线程 `1` 处理 `input` 中元素 `[6, 12)` 的 chunk，并行线程 `5` 处理元素 `[30, 36)` 的 chunk，以此类推。
+
+在许多场景中，不需要分别使用 `.chunk` 和 `.at` 表达式，因为 `.chunkat` 接受有界变量作为参数。这些变量的上界充当*分块因子*，当前值充当 *chunk 索引*。
+
+## 使用多个有界变量
+以下代码展示了使用多个有界变量的示例：
+
+```choreo
+__co__ void foo(f32 [36, 14, 8] input) {
+  parallel p by 6 {
+    with index in [7, 4] {
+      foreach index {
+        dma.copy input.chunkat(p, index) => shared;
+      }
+    }
+  }
+}
+```
+
+在这个示例中，有两个有界变量：`p` 是由 `parallel-by` 语句定义的*有界整数*，而 `index` 是包含两个整数的*有界 ituple*。`chunkat` 表达式将它们拼接成一个上界为 `{#p, #index}`、当前值为 `{p, index}` 的*有界 ituple*。因此，每个 chunk 的形状计算为 `[36, 14, 8] / {#p, #index} = [36, 14, 8] / {6, 7, 4} = [6, 2, 2]`。
+
+此外，由于 `p` 是用于并行化的有界变量，因此有 `6` 个线程并行工作，每个线程处理一个形状为 `[6, 14, 8]` 的大 chunk。在单个并行线程内，它迭代 `7x4` 次，每次将一个 `[6, 2, 2]` 的小 chunk 搬移到编译器分配的 `shared` 存储中。
+
+通过这种方式，我们可以对数据搬移应用分块策略，每次迭代中每个并行线程只选取数据/缓冲区的一部分进行传输。Croktile 编译器利用 *spanned* 数据和*有界变量*的信息，将 DMA 语句转译为 C++ 下标运算、DMA 配置等，简化了 C++ 程序员通常面对的繁琐且容易出错的工作。这使得学习 Croktile 语法非常值得。
+
+## 分块与数据流
+可以在 *DMA 语句*的源端或目标端使用 `chunkat` 表达式。当 `chunkat` 仅用于源端时，通常是将输入或缓冲区分成更小的块，搬移到更靠近处理器的存储中。相反，当 `chunkat` 仅用于目标端时，通常是将缓冲区搬移以组成输出的一部分。以下代码展示了一个示例：
+
+```choreo
+__co__ auto foo(f32 [36] input) {
+  f32 [36] output;
+  parallel p by 6 {
+    f0 = dma.copy input.chunkat(p) => shared;  // tile the source
+    dma.copy f0.data => output.chunkat(p);     // un-tile the destination
+  }
+  return output;
+}
+```
+
+在这个示例中，语句对目标端应用了 `chunkat`，将 `shared` 中的数据块搬移并"反分块"到输出中。注意，如果不使用*存储*作为目标端的*数据表达式*，Croktile 编译器**要求源数据和目标数据具有相同的形状和元素类型**。
+
+然而，目前很少有目标平台支持同时对源端和目标端使用 `chunkat` 表达式。
+
+## 快速回顾
+在本节中，我们学习了在 Croktile 中使用 `chunkat` 表达式对 DMA 语句中的数据进行分块，从而将数据分成更小的块以实现高效处理。我们探讨了如何将 `chunkat` 应用于 DMA 语句的源端或目标端，以管理存储与处理器之间的数据搬移。
+
+现在，您可以尝试编写一个完整的 tileflow 程序。祝您好运！

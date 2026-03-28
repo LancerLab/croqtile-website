@@ -1,0 +1,96 @@
+---
+title: "Spanned 数据"
+description: "声明 spanned 缓冲区、基本类型、存储修饰符、参数传递与生命周期管理。"
+order: 5
+---
+
+## 概述
+Croktile *tileflow 程序*描述了如何搬移数据。因此，声明或定义数据和缓冲区是最基本的操作。在本节中，您将学习相关语法。
+
+## *Spanned*：数据与缓冲区
+Tileflow 程序的核心任务是通过搬移来操作大型数据集。在某些术语中，Croktile 函数的输入和输出分别被称为"输入数据"和"输出数据"，而其他存储则被称为"缓冲区"。从函数的角度来看，这在概念上区分了"外部"和"内部"内存。然而，"数据"和"缓冲区"都指向存储位置。在 Croktile 中，两者都被类型化为 **spanned**，表示它们是与 *mdspan* 所表示的形状相关联的数据/缓冲区。在后续内容中，我们将其称为 *spanned data*，或简称 *spanned*。
+
+## 定义 *Spanned 数据*
+定义 *spanned 数据*需要同时指定元素类型和形状。例如：
+
+```
+f32 [32, 16] data;
+```
+
+这定义了一个形状为 `[32, 16]` 的缓冲区，元素类型为 `f32`，即 *IEEE-754* 标准的单精度浮点数。也可以使用命名的 `mdspan` 来定义缓冲区：
+
+```
+shape : [72, 14];
+s32 [shape] data0;              // using the named mdspan `shape`
+u32 [shape(0), shape(1)] data1; // same shape as the above
+u16 [shape + 6] data2;          // shaped as [78, 20]
+s16 [shape, 8] data3;           // shaped as [72, 14, 8]
+```
+
+这里我们使用命名的 *mdspan* `shape` 定义了一个名为 `data0` 的二维缓冲区，元素类型为 32 位整数。注意命名的 *mdspan* `shape` 放置在 `[]` 内。此外，可以对 *mdspan* 使用 *element-of*、算术运算或拼接操作来指定缓冲区的形状。
+
+在 Croktile 术语中，元素类型被称为**基本类型（fundamental type）**。Croktile 支持多种基本类型，包括：
+
+- **无符号整数**：`u8`、`u16`、`u32`
+- **有符号整数**：`s8`、`s16`、`s32`
+- **浮点数**：`f16`、`bf16`、`f32`
+
+前缀 `u` 和 `s` 分别代表"无符号（unsigned）"和"有符号（signed）"，数字后缀表示类型的位宽。`f16` 指 *IEEE-754* 标准的*半精度浮点数*，`bf16` 指 16 位 *binary float*，在机器学习场景中广泛使用。
+
+注意 `s32` 与 `int` 是不同的。虽然它们占用相同的存储空间，但在 Croktile 中，`s32` 不能单独用于定义编程实体。例如：
+
+```choreo
+s32 a;  // error: the fundamental type can not be used for variable definition alone
+```
+这将导致编译时错误。因此，`s32` 不能像 `int` 那样用于程序控制，两者之间也无法进行类型转换。
+
+## 存储修饰符
+在实际代码中，某些缓冲区声明必须指定**存储修饰符（storage specifier）**，如下所示：
+
+```choreo
+global f32 [32, 7, 2] a;
+shared u8 [512, 144] b;
+local u8 [72, 1024] c;
+```
+
+由于 Croktile 在异构环境中处理存储，不带存储修饰符的缓冲区定义默认使用主机程序的存储类型，即 CPU 内存。其他存储修饰符由目标平台定义。例如，*CUDA/Cute*（用于 GPU 硬件）支持：
+
+- *global*：指设备的全局存储。
+- *shared*：指设备块的共享存储。
+- *local*：指线程私有存储。
+
+其他目标平台可能有不同的定义。此外，不同存储类型的缓冲区在声明时有一定限制。我们将在后续章节中探讨这些内容。
+
+## 初始化
+可以在声明处对缓冲区进行初始化。例如：
+
+```choreo
+local s32 [17, 6] b1 {0};       // elements are initialized to 0
+shared f32 [128, 16] b2 {3.14f}; // elements are initialized to 3.14f
+```
+
+*spanned 数据*的*初始化表达式*语法很简单：在变量名后用花括号包含一个初始值。但其功能有限——它总是将所有元素设置为同一个固定值。
+
+## 声明参数和返回值
+*Spanned 数据*在主机程序和 tileflow 程序之间传递。因此，Croktile 函数可以将 *spanned 数据*作为参数。以下代码展示了一个示例：
+
+```choreo
+__co__ f16 [7, 8] foo(f32 [16, 17, 5] input) {...}
+```
+
+其语法类似于变量定义，但不允许对已有 *mdspan* 进行操作，也不允许使用存储修饰符或初始化。
+
+*spanned* 参数有一个实用的内置成员函数 `.span`，它提供 *spanned 数据*关联的 *mdspan*。以下代码演示了如何用它来声明缓冲区：
+
+```choreo
+__co__ auto foo(f32 [16, 17, 5] input) {
+  f32 [input.span / {4, 1, 5} ] buffer;  // declare a buffer with tiled shape
+  // ...
+}
+```
+
+## 缓冲区生命周期管理
+在 *Croktile 函数*内部分配的存储的生命周期由 Croktile 编译器管理，以实现高效使用。编译器会尽可能在生命周期不重叠的情况下复用缓冲区。因此，Croktile 用户无需手动进行缓冲区管理。
+
+## 快速回顾
+本节介绍了在 Croktile tileflow 程序中定义和管理数据/缓冲区的方法，包括声明语法、初始化、存储修饰符以及编译器的高效缓冲区生命周期管理。这为我们进入下一个重要主题——动态形状支持——奠定了基础。

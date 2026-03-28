@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript type check
+        run: npx tsc --noEmit
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Jest
+        run: npm test -- --ci --passWithNoTests
+
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify static pages generated
+        run: |
+          EN_PAGES=$(find out/en -name "*.html" 2>/dev/null | wc -l || echo 0)
+          CN_PAGES=$(find out/cn -name "*.html" 2>/dev/null | wc -l || echo 0)
+          echo "EN pages: $EN_PAGES, CN pages: $CN_PAGES"
+          if [ "$EN_PAGES" -lt 10 ]; then
+            echo "::error::Too few EN pages generated ($EN_PAGES)"
+            exit 1
+          fi
+          if [ "$CN_PAGES" -lt 10 ]; then
+            echo "::error::Too few CN pages generated ($CN_PAGES)"
+            exit 1
+          fi
+
+  content-check:
+    name: Content Parity Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check en/cn content parity
+        run: |
+          FAIL=0
+          for section in tutorials docs changelog; do
+            EN_DIR="src/content/$section/en"
+            CN_DIR="src/content/$section/cn"
+            if [ ! -d "$EN_DIR" ]; then continue; fi
+            EN_FILES=$(ls "$EN_DIR"/*.mdx 2>/dev/null | xargs -I{} basename {} | sort)
+            CN_FILES=$(ls "$CN_DIR"/*.mdx 2>/dev/null | xargs -I{} basename {} | sort)
+            DIFF=$(diff <(echo "$EN_FILES") <(echo "$CN_FILES") || true)
+            if [ -n "$DIFF" ]; then
+              echo "::warning::Content parity mismatch in $section:"
+              echo "$DIFF"
+              FAIL=1
+            else
+              echo "✓ $section: en/cn parity OK"
+            fi
+          done
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::warning::Some sections have mismatched en/cn content files"
+          fi

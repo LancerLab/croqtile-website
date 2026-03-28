@@ -1,0 +1,142 @@
+---
+title: "调用设备函数"
+description: "call、模板与目标注意事项。"
+order: 10
+---
+
+## 概述
+
+在当前 Croktile 函数的实现中，通过调用*设备函数（device function）*来完成指定目标的计算。本节说明 Croktile 中 *call 语句*的细节。
+
+## 调用设备函数
+
+在 Croktile 函数中调用设备函数时，必须使用由 `call` 引导的调用语句。
+
+### call 语句的基本语法
+
+Croktile 中 `call` 语句的一般形式为：
+
+```cpp
+call func-name <optional-template-args> (arguments);
+```
+
+关键字 `call` 后是函数名 `func-name`，可选的尖括号内为模板实参（逗号分隔）。`arguments` 与普通 C/C++ 函数一样写在 `()` 内，逗号分隔。
+
+注意：**Croktile 转译过程不会在调用方与被调用方之间做任何检查**，包括函数是否存在、函数签名是否一致、参数是否匹配等；这些工作交给目标平台的编译流程。程序员须自行保证 Croktile 函数与设备函数之间的约定一致。
+
+此外，在目前支持的所有平台上，此类调用必须在 `parallel-by` **内部**进行，因为设备函数只在异构硬件上运行。因此下例中，`mou` 里的 `call bar();` 不合法——它试图在假定为主机代码的区域调用设备函数。
+
+```cpp
+__co__ void foo() {
+  parallel p by 1 {
+    call bar();  // ok
+  }
+}
+__co__ void mou() {
+  call bar();  // error: not able to call device function from host
+}
+```
+
+### 约定：允许的实参类型
+
+当前实现中，实参必须是以下之一：
+
+- *跨度数据（Spanned Data）*类型，或
+- 标量*整数*类型，或
+- 标量*浮点*类型。
+
+其中标量*整数*类型仅包含 `int`；标量*浮点*类型包括 `float`、`double`、`half`、`bfp16`、`half8`。由于目标平台对浮点的支持不同，*浮点类型*参数也会随目标平台变化。
+
+此外，考虑到浮点对 tileflow 程序用处有限，**Croktile 目前不支持对浮点做运算**；它们通常作为设备计算的数值，由 *tileflow 程序*直接传给设备内核。
+
+下例展示用法：
+
+```cpp
+__device__ void bar(float *p, int m, int n) {}
+__device__ void foo(float *, int, unsigned, double, float) {}
+
+__co__ void foobar(f32 [M, 24] input, int N, float padding) {
+  parallel p by 1 {
+    shared f32 [14, 7] buffer;
+    call bar(input.data, M, buffer.span(0));
+    call foo(buffer.data, N, 3, 3.14, padding);
+  }
+}
+```
+
+本例将多种类型从 Croktile 函数传入设备函数，与设备端参数一一对应。注意在设备函数中，***跨度数据*实参对应的形参类型即其*元素类型*的指针**，形状信息不再传递。例如 `foo` 的参数 `p` 为 `float*`，对应*跨度数据*实参 `input.data`。在 Croktile 中，我们称该参数为*跨度数据*的**退化（decayed）**指针。若使用 `float p[]` 等形式，可能在目标编译阶段失败。
+
+对 `f16`、`bf16` 等类型，若目标没有原生支持，可使用 `croktile::f16`、`croktile::bf16` 等处理。
+
+## 为调用实例化函数模板
+
+### 触发 C++ 模板实例化
+
+Croktile 代码可以调用模板函数。例如：
+
+```cpp
+template<int M, int N, int K>
+__device__ void matmul_kernel(int *lhs, int* rhs, int* output) {}
+
+__co__ auto matmul(s32 [96, 72] lhs, s32 [72, 24] rhs) {
+  s32 [lhs.span(0), rhs.span(1)] output;
+  parallel p by 6 {
+    shared s32 [output.span / #p] buffer;   // shape: [16, 4]
+    lhs_load = dma.copy lhs.chunkat(p, _) => shared;
+    rhs_load = dma.copy rhs.chunkat(_, p) => shared;
+    call matmul_kernel<buffer.span(0), buffer.span(1), 72>(lhs_load.data, rhs_load.data, buffer);
+  }
+  return output;
+}
+```
+
+此处定义了设备函数模板 `matmul_kernel`，含三个模板参数。调用方指定模板实参后，会触发函数模板实例化，得到供本次调用使用的实例，例如 `matmul_kernel<16, 4, 72>`。
+
+因此在 Croktile 中调用模板函数与 C++ 类似；但**传入的模板实参必须能被 Croktile 编译器推断为编译期常量**。因此任何运行期值都可能导致错误。
+
+```cpp
+__co__ void foo(int M) {
+  parallel p by 1 {
+    call bar<M>();  // error: 'M' is a runtime value
+  }
+}
+```
+
+Croktile 编译器会尽可能在编译期推断值；若模板实参无法推断，编译将中止并报错。
+
+### *factor* 目标相关细节
+
+在 *factor* 等目标上，设备函数需遵循 C 链接约定，必须以 `extern "C"` 为前缀。由于模板函数不能用于 C 链接，Croktile 提供了一些包装技巧。例如：
+
+```cpp
+__cok__ {
+extern "C" void bar(int v) {};  // v is a compile-time constant
+}
+
+__co__ void foo() {
+  parallel p by 1 { call bar(3); }
+}
+```
+
+也可将 `bar` 写成函数模板，例如：
+
+```cpp
+__cok__ {
+template <int v> void bar() {};
+
+// compiler generate a explicit function template specialization:
+// template<> void bar<3>() {};
+}
+
+__co__ void foo() {
+  parallel p by 1 { call bar<3>(); }
+}
+```
+
+如注释所述，Croktile 编译器可能生成函数模板 `bar<3>` 的显式特化版本，从而同时支持模板；但注意该函数模板不再像普通 *factor* 设备函数那样需要 `extern "C"` 修饰。
+
+由于与其他目标的实现不同，可在 *croktile-factor* 编译时使用 `-kt` 启用该能力。
+
+### 小结
+
+本节学习了调用设备函数的语法，包括普通调用以及触发函数模板实例化的调用。程序员须谨慎编写，因为转译阶段不做检查，错误往往推迟到目标编译阶段才暴露，报错可能更难理解。

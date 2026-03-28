@@ -25,7 +25,7 @@ export function Footer() {
     {
       title: t("community"),
       links: [
-        { label: t("github"), href: "https://github.com/codes1gn/croktile", external: true },
+        { label: t("github"), href: "https://github.com/LancerLab/croktile", external: true },
       ],
     },
   ];
@@ -37,9 +37,9 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5">
               <img
-                src="/logo-mascot.png"
-                alt="Croktile"
-                className="h-8 w-auto rounded-md"
+              src="/favicon.svg"
+              alt="Croktile"
+              className="h-7 w-7 rounded-md"
               />
               <span className="text-lg font-bold tracking-tight">
                 <span className="text-mint-500">Crok</span>Tile
@@ -80,7 +80,7 @@ export function Footer() {
         </div>
         <div className="mt-12 pt-8 border-t flex flex-col items-center gap-4">
           <a
-            href="https://github.com/codes1gn/croktile"
+            href="https://github.com/LancerLab/croktile"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-[var(--muted)] transition-colors text-sm"

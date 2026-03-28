@@ -1,0 +1,62 @@
+---
+title: "多缓冲"
+description: "使用 dma.any、swap 和 rotate 实现双缓冲。"
+order: 6
+---
+
+# 使用 Croktile 进行多缓冲优化
+
+为积极优化高性能计算内核，常用的一种方法是让计算与 DMA（直接内存访问）数据搬移重叠。这种方法称为 **多缓冲优化**，通常需要程序员管理多个缓冲区。
+
+在 Croktile 中，该方法依赖两个关键编程原语：用作占位的 future **`dma.any`**，以及 **`swap`/`rotate`** 函数。下面用示例说明：
+
+```cpp
+__co__ s32 [6, 17, 128] ele_add(s32 [6, 17, 128] lhs,
+                                s32 [6, 17, 128] rhs) {
+  s32[lhs.span] output;
+  parallel p by 6 {
+    with index = {x, y} in [17, 4] {
+      local s32 [rhs.span / {#p, #x, #y}] l_out;
+      foreach x { // first bunch
+        lfA = dma.copy.async lhs.chunkat(p, x, y) => local;
+        rfA = dma.copy.async rhs.chunkat(p, x, y) => local;
+        lfB = dma.any;  // dummy DMA used for multi-buffering
+        rfB = dma.any;
+        foreach y(1:) {
+          lfB = dma.copy.async lhs.chunkat(p, x, y) => local;
+          rfB = dma.copy.async rhs.chunkat(p, x, y) => local;
+          wait lfA, rfA;  // wait another bunch
+          call kernel(lfA.data, rfA.data, l_out, |lfB.span|);
+          dma.copy l_out => output.chunkat(p, x, y - 1);
+          swap(lfA, lfB); // exchange futures
+          swap(rfA, rfB);
+        }
+        lf = select(#y % 2, lfB, lfA);
+        rf = select(#y % 2, rfB, rfA);
+        wait lf, rf;  // handle the last bunch
+        call kernel(lf.data, rf.data, l_out, |lfB.span|);
+        dma.copy l_out => output.chunkat(p, x, y(-1));
+      }
+    }
+  }
+  return output;
+}
+```
+
+在 croktile 函数 `ele_add` 中，有两个输入参数 `lhs` 与 `rhs`，二者在本地存储中均采用双缓冲。我们称这两组缓冲区为「A」与「B」。缓冲区 A 用于计算时，缓冲区 B 通过 DMA 填充数据。内核在缓冲区 A 上完成计算后，A 与 B 的角色互换：A 变为加载下一块数据的缓冲区，B 变为用于计算的缓冲区。该过程迭代直到处理完所有数据块。
+
+实现将数据搬移与计算分为三个阶段：
+
+ - **序言**（第 8–11 行）。预先加载第一块数据。本例中缓冲区 A 被预加载。
+ - **主体**（第 12–20 行）。处理上一轮或序言中预加载的数据，并为下一轮预加载数据。
+ - **尾声**（第 21–25 行）。仅处理最后一块数据。
+
+代码中，future `lfB` 与 `rfB` 被声明为占位符。这些 dummy future 作为占位，并在第 13–14 行被 DMA 语句替换。需要提前声明 dummy future 的原因是：主体阶段（第 12–20 行）中发起的 DMA 所产生的 future（`lfB` 与 `rfB`）会在尾声阶段（第 21–22 行）使用；但从词法作用域看，若在 `foreach` 块内定义 future，其生命周期无法延伸到这些最后的使用处，因此必须提前声明 `lfB` 与 `rfB`。
+
+第 18–19 行的 **swap** 语句交换 future，以保证第 15 行的 **wait** 正确。注意，只能交换 DMA 操作完全相同的 future。此外，第 12 行 *foreach* 的迭代范围经过调整：`foreach y(1:)` 表示对 *有界变量* `y` 的循环从第二个值开始到上界。第 17 行的 *chunkat* 表达式也做了相应调整。`y - 1` 表示当前 `y` 减 1，使主体阶段与序言阶段正确配合。这样调整是因为迭代次数需减 1，且预取应获取「下一块」数据，而计算在「当前块」上进行。也可使用 `foreach y(:-1)` 并相应调整第 13–14 行预取语句中的 chunkat 表达式达到相同效果。
+
+第 25 行中，表达式 `y(-1)` 在其界限内获取 `y` 的「上一个值」。
+
+注意第 21–22 行的 **select** 表达式处理有界变量 `y` 上界为奇数或偶数两种情况；无论哪种情况都能取得最后一块的 future。
+
+若需要两个以上的缓冲区，需用 **rotate** 语句替代 **swap**。

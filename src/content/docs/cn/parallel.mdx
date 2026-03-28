@@ -1,0 +1,41 @@
+---
+title: "并行执行"
+description: "SPMD 区域与循环构造概览。"
+order: 4
+---
+
+## 并行块
+
+Croktile 采用 SPMD 风格的并行：
+
+```cpp
+parallel (blockIdx) {
+  // Code runs across all thread blocks
+  parallel (threadIdx) {
+    // Code runs across all threads within a block
+  }
+}
+```
+
+## 循环构造
+
+`within` 构造提供结构化循环：
+
+```cpp
+within (i : N) {
+  // Iterates i from 0 to N-1
+  output[i] = input[i] * 2.0;
+}
+```
+
+## 并行与循环结合
+
+```cpp
+parallel (blockIdx) {
+  shared = dma.copy input.chunkat(block_size, 1) => smem;
+  within (k : K / tile_k) {
+    mma shared.chunkat(1, tile_k)
+        weights.chunkat(1, tile_k) => output;
+  }
+}
+```

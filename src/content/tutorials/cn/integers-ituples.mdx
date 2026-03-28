@@ -1,0 +1,118 @@
+---
+title: "整数与 i-tuple"
+description: "用于控制流、分块因子的整数和整数元组类型及其与 mdspan 的运算。"
+order: 4
+---
+
+## 概述
+本节将介绍如何在 Croktile 代码中定义*整数（integer）*与整数元组（*i-tuple*），并理解其用法。
+
+## 用于程序控制的整数
+在高性能计算内核中，整数通常用于程序控制而非数值计算。在 Croktile 的 *tileflow program* 中，整数**仅**用于循环控制与数组下标。鉴于这些场景下的取值范围有限，Croktile 只提供一种整数类型——**32 位有符号整数**——以简化该领域专用场景下的设计。
+
+在 Croktile 中，**integer** 类型变量的定义方式与 C/C++ 类似：
+
+```choreo
+int a = 1;
+```
+
+由于 Croktile 可从*初始化表达式*推断类型，也可以用另一种风格定义整数变量：
+
+```choreo
+a = 1;
+```
+
+与 C/C++ 类似，可以在一行中定义多个整数：
+
+```choreo
+int a = 1, b = 2, c = 3;
+d = 4, e = 5;
+```
+
+在 Croktile 中，*mdspan* 类型的形状**不能**用作函数参数。但整数可以从主机传入 Tileflow 程序，也可以从 Tileflow 程序传入设备：
+
+```choreo
+__co__ void foo(int a) {
+  // ...
+  call kernel(a, 3);
+}
+```
+
+与 C/C++ 不同，Croktile **不允许**在未初始化的情况下声明整数，也**不允许**对整数重新赋值。例如：
+
+```choreo
+int a;  // error: declaration without initialization
+int b = 1;
+b = 3;  // error: re-assignment
+```
+
+这保证了**整数必须在声明时初始化，且不能重新赋值**。在某些语境下，这些整数被称为「**不可变（immutable）**」或「**常量（constant）**」。
+
+## 范围组与整数组
+在 Croktile 中，*mdspan* 可用来表示各维形状。但如前所述，*mdspan* 表示的是 **Multi-Dimensional Span**，其元素是 *Dimensional Span*，隐含的是**取值范围**。
+
+例如，*mdspan* `[7, 14]` 表示两个范围 `[0, 7), [0, 14)` 组成的组。因此，*mdspan* 并不表示整数值的列表。但在某些场景下，将整数值成组很有用：
+
+- 在考虑两个 mdspan 的差值（delta）时，需要多个整数。在高层语义中，该差值可能反映调整形状维度时填充量的差异。
+- 在对形状做分块时，多个分块因子是整数，而不是范围。
+
+这些情况促使 Croktile 提供一种用于将整数值成组的类型。
+
+## 将整数组成整数元组（i-tuple）
+### 定义 i-tuple
+在 Croktile 中，多个整数可以组成**整数元组（integer-tuple）**，简称 **i-tuple**（或 **ituple**）。可使用关键字 `ituple` 定义 *i-tuple*。下面代码展示了用法：
+
+```
+ituple a = {1, 2, 3};
+b = {4, 5, 6};  // utilize the type inference
+```
+
+由于 Croktile 可从*初始化表达式*推断类型，程序员常常可以省略 `ituple` 关键字。但若没有显式类型标注，*ituple* 变量定义在乍看之下可能与 *mdspan* 定义相似。区分方式如下：
+
+- *ituple* 的*初始化表达式*跟在赋值运算符 `=` 之后（与整数类似），而 *mdspan* 在 `:` 之后初始化；
+- *ituple* 的*初始化表达式*由 `{}` 括起，而 *mdspan* 使用 `[]`。
+
+与 `mdspan` 类似，可以在编译期对 *ituple* 强制进行秩检查：
+
+```
+ituple<3> a = {1, 2};  // error: inconsistent rank
+```
+
+### i-tuple 上的运算
+对 *i-tuple* 的运算与对 *mdspan* 类似。既可以使用**元素访问**操作 `()` 取出元素值，也可以将 *ituple* 作为整体使用：
+
+```choreo
+a = {3, 4};
+b = {a(0), 1, a(1)};  // '()' to retrieve the element value
+c = a {(0), (1), 2};  // syntax sugar
+d = {a, 5, 6};        // concatenate
+e = a + 1;            // addition is applied elementwise
+```
+
+注意，与 *integer* 和 *mdspan* 类似，***ituple* 变量必须初始化且不能重新赋值**。
+
+在实践中，*i-tuple* 常与 *mdspan* 一起使用。例如：
+
+```choreo
+shape : [7, 18, 28];
+tiling_factors = {1, 2, 4};
+tiled_shape : shape / tiling_factors;
+padded_shape : shape + {2, 0, 2};
+```
+
+在此代码中，mdspan 类型的 `shape` 除以 ituple 类型的分块因子，得到 `tiled_shape`。此外，`padded_shape` 由初始 `shape` 与匿名 *ituple* 相加推导。注意，当 *mdspan* 与 *ituple* 相加时，二者的**秩必须一致**，否则会报错。
+
+```choreo
+shape : [7, 8, 9] + {1, 2}; // error: inconsistent rank
+```
+
+### 整数与 i-tuple 的求值
+与 mdspan 类似，*integer* 与 *i-tuple* 的运行时开销都很小。只要可能，其值会在**编译期**求值，因此程序员通常可以忽略其成本。
+
+### 前瞻：有界 i-tuple
+在真实的 Croktile 代码中，*i-tuple* 并不常用。但其变体——**有界 i-tuple（bounded i-tuple）**——会将 *i-tuple* 与 *mdspan* 绑定以标明可能范围，对构建 Croktile 循环至关重要。我们将在后续章节更详细地介绍 *bounded i-tuple*。
+
+## 快速小结
+本节学习了如何在 Croktile 中定义 *integer* 与 *i-tuple*。*Integer* 遵循 C/C++ 语法；*i-tuple* 的语法与 *mdspan* 类似，但可与 *mdspan* 运算以推导新值。
+
+两种类型都**需要*初始化表达式*且不能重新赋值**，因而表现为**常量**或**不可变**值。事实上，除特定类型外，Croktile tileflow 程序中定义的所有变量都是不可变的。因此，在多数情况下**赋值运算符 `=` 用于变量初始化**，程序须牢记这一点。

@@ -1,0 +1,23 @@
+---
+title: "贡献指南"
+description: "测试与 Pull Request。"
+order: 13
+---
+
+## 概述
+
+Croktile 的开发遵循常见开源流程：fork 仓库、在分支上开发，并发起 pull request，在说明中写清改动内容与测试方式。
+
+## 构建与测试
+
+完成[从源码构建](/docs/getting-started)后，请经常运行测试套件：
+
+```bash
+make test
+```
+
+使用 `make help` 可查看其他维护目标。针对算子样例，`make sample-test` 会运行样例测试；可用 `make sample-test-operator OPERATOR=add`（及其他支持的算子名）缩小范围。
+
+## Pull request
+
+改动应保持聚焦、风格与现有代码一致；新增或修复行为时请附带测试。若构建或测试失败，请提供足够上下文（目标平台、编译器版本、失败命令），便于他人复现。

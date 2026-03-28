@@ -1,0 +1,132 @@
+---
+title: "异步 DMA 模式"
+description: "future、同步与异步 DMA、wait 以及操作类型。"
+order: 5
+---
+
+## 概览
+数据搬移在 Croktile 中被抽象为最复杂的语句之一。本节将介绍基本的 *DMA 语句*结构及其产生的 future 变量。
+
+## 数据搬移语句
+
+Croktile 旨在覆盖多个层次的数据搬移；当前主要关注异构硬件之间以及跨内存层次的数据搬移。在硬件术语中，这类搬移称为 **直接内存访问（DMA）**。Croktile 采用该术语，并将数据搬移抽象为 **DMA 操作**。
+
+### 基本语法
+
+Croktile 中的 DMA 语句可以是异步实体，即 **异步 DMA** 之后的代码会与该 DMA 语句并行执行。对于 *异步 DMA*，在使用 DMA 结果之前需要显式同步。
+
+为支持这些特性，语法组织如下：
+
+```cpp
+future = dma-op src-expr => dst-expr;
+```
+
+该语句定义 **future** 类型的变量，出现在赋值运算符 `=` 左侧。在 Croktile 中，***future* 既表示异步执行实例的句柄，也表示 DMA 结果**。因此，对于 *同步 DMA* 语句，可以忽略 *future* 的定义。
+
+**DMA 操作**的右侧包括 **操作类型**（`dma-op`）、操作源的 **数据表达式**（`src-expr`），以及目标的 *数据表达式*（`dst-expr`）。源与目标由符号 `=>` 分隔，表示数据流动方向。
+
+### 同步与异步
+
+**异步 DMA**（**Async-DMA**）亦称 **非阻塞 DMA**，因为不会阻塞后续代码的执行。相反，**同步 DMA**（**Sync-DMA**）称为 **阻塞 DMA**，因为 DMA 完成前代码不会继续。下文将交替使用这些术语。
+
+在 Croktile 中，**DMA 操作**上的 `.async` 后缀表示该操作为异步。示例如下：
+
+```cpp
+f0 = dma.copy.async data0 => shared; // non-blocking
+f1 = dma.copy data1 => shared;       // blocking
+...
+wait f0;                             // synchronization
+```
+
+本例中，产生 future `f0` 的 DMA 操作为异步，允许在后台传输数据的同时继续执行程序。产生 `f1` 的 DMA 操作为同步，即程序会暂停直到 `data1` 完全搬移到 `shared` 内存。与此同时，`data0` 的拷贝可能仍在进行。
+
+执行语句 `wait f0;` 会使程序检查 `data0` 是否已完全搬移到 `shared` 内存，从而将主执行流与 `f0` 的异步 DMA 同步。注意，若 *异步 DMA* 未被等待，通常会导致意外的硬件问题，因此程序员必须确保代码中不存在未处理的「悬空 future」。
+
+
+### 操作类型
+
+Croktile 的 DMA 语句是为支持现代硬件而设计的抽象。除简单线性内存拷贝外，**张量内存加速器（TMA）**等高级硬件可在传输过程中搬移带形状的数据并做形状变换。Croktile 在软件层将这些能力映射为不同的 **DMA 操作类型**。支持的操作包括：
+
+- `dma.copy`：直接拷贝扁平内存。
+- `dma.pad`：在传输数据时对带形状的数据进行填充。
+- `dma.transp`：在传输数据时对带形状的数据进行转置。
+
+填充、转置等细节作为 DMA 操作的参数进行配置。例如：
+
+```cpp
+global f32 [32, 16, 9] input;
+dma.transp<0, 2, 1> input => shared;  // Result shape [32, 9, 16]
+dma.pad<{1, 0, 3}, {0, 1, 2}, {0, 0, 0}, 0.1f> input => shared; // Result shape [33, 17, 14]
+```
+
+此处 **DMA 配置**由 `<>` 括起；不同操作配置不同。特定平台（例如 *CUDA/Cute*）的详细配置语法与限制见下文示例。
+
+程序员应注意，除 `dma.copy` 外的 DMA 类型支持因平台而异。例如在 *CUDA/Cute* 上，可能是 TMA 映射，或由多线程 load 指令编排；也可能通过纯软件或软硬件协同实现高级 DMA，但这些尚未全部支持。
+
+### 数据表达式
+
+到目前为止，我们只使用了简单的数据表达式：已定义的 **spanned data** 或 **存储位置**。**存储位置**仅用于 **目标缓冲区** 声明，因为需要 Croktile 编译器为其分配内存。示例如下：
+
+```cpp
+global f32 [32, 16] input;
+shared f32 [32, 16] output;
+dma.copy input => output;  // Copy to a user-declared buffer
+dma.copy input => shared;  // Same, but to a compiler-allocated buffer
+```
+
+本例中，第二条 DMA 的目标指定为存储位置 `shared`，需要编译器据此分配存储，因而与第一条等价。实践中建议将存储位置作为目标，Croktile 可从 **DMA 语句**推导目标形状。
+
+然而，实践中很少只使用简单的 **数据表达式**。下一节将介绍 **ChunkAt** 表达式，展示如何在数据表达式中实现分块。
+
+### Future 与 Wait
+
+*同步 DMA* 与 *异步 DMA* 都可用于定义 *future*。如前所述，*future* 作为异步操作的句柄，通常作为 `wait` 语句的参数以同步 *异步 DMA*。
+
+Croktile 允许 `wait` 语句接受多个 *future*。但在 `wait` 中使用来自 **同步 DMA** 的 *future* 会报错。示例如下：
+
+```cpp
+f0 = dma.copy.async input0 => shared;
+f1 = dma.copy.async input1 => shared;
+f2 = dma.copy input2 => shared;
+...
+wait f0, f1;  // Multiple wait
+wait f2;      // Error: cannot wait on a sync-dma
+```
+
+在 Croktile 中，*future* 的另一用途是获取关联 DMA 语句的目标缓冲区。这也是允许 **同步 DMA** 定义 future 的原因。Croktile 为 *future* 变量提供两个内置成员函数：
+
+- `.span`：获取 DMA 目标缓冲区的 **mdspan**。
+- `.data`：获取 DMA 目标缓冲区的引用（spanned data）。
+
+例如：
+
+```cpp
+f0 = dma.copy.async input0 => shared;
+f1 = dma.copy input2 => shared;
+...
+local f32 [f0.span] buffer;
+call device_kernel(f1.data, |f1.span|);
+```
+
+本例使用 `.span` 获取 `f0` 目标缓冲区的形状，使用 `.data` 获取 `f1` 的 *spanned* 数据。此外，对 `f1` 目标缓冲区 *mdspan* 进行 **ElementCount** 运算。**ElementCount** 返回 **mdspan** 中的元素个数，在许多场景下很有用。
+
+## 小结
+本节介绍了 Croktile 如何通过 *DMA 语句*简化数据搬移，以及如何区分同步与异步操作，并支持多种 *DMA 操作类型*。最后说明了 future 如何管理异步操作并获取缓冲区，以保证数据流与同步顺畅。
+
+下一节将进一步讨论 *数据表达式*，展示如何实现数据分块/阻塞。
+
+
+### 完全非阻塞 DMA 模式（Croktile 中的链式模式）
+在 Croktile 中，可以将多个异步 DMA 链接起来，并通过 `after` 进行基于事件的通知，从而实现完全非阻塞 DMA。这样只有在前序 DMA 完成后才会触发下一个。示例如下：
+
+```cpp
+out_store = dma.copy.async l2_out => output.chunkat(m_tile, n_tile) after out_store_s;
+```
+
+本例中：
+
+- `out_store` 是将数据从 l2_out 传输到 `output.chunkat(m_tile, n_tile)` 的异步 DMA 操作。
+- `out_store_s` 是必须在 `out_store` 开始之前完成的另一 DMA 操作或事件。
+- `after out_store_s` 语法表示 `out_store` 仅在 `out_store_s` 完成后才开始，从而保证主线程不被阻塞。
+
+此时 `out_store` 与 `out_store_s` 都不会阻塞主程序流，程序在后台处理这些 DMA 的同时继续执行。关键在于 `out_store_s` 的完成会触发 `out_store` 的开始，在两个 DMA 操作之间形成事件驱动的依赖。该模型可实现高效、非阻塞的内存传输。

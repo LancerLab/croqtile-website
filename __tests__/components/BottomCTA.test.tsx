@@ -41,7 +41,7 @@ describe("BottomCTA", () => {
   it("renders GitHub link", () => {
     renderWithProviders(<BottomCTA />);
     const ghLink = screen.getByText("GitHub");
-    expect(ghLink.closest("a")).toHaveAttribute("href", "https://github.com/croktile");
+    expect(ghLink.closest("a")).toHaveAttribute("href", "https://github.com/LancerLab/croktile");
     expect(ghLink.closest("a")).toHaveAttribute("target", "_blank");
   });
 });

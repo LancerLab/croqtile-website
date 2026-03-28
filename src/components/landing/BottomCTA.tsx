@@ -22,9 +22,9 @@ export function BottomCTA() {
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
           <img
-            src="/logo-pixel.png"
+            src="/favicon.svg"
             alt="Croktile mascot"
-            className="mx-auto h-28 w-auto mb-8 rounded-xl"
+            className="mx-auto h-20 w-20 mb-8"
           />
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
             Try <span className="text-gradient">Croktile</span> today.
@@ -63,7 +63,7 @@ export function BottomCTA() {
               {t("cta")}
             </Link>
             <a
-              href="https://github.com/codes1gn/croktile"
+              href="https://github.com/LancerLab/croktile"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3.5 text-sm font-semibold border rounded-xl

@@ -1,0 +1,25 @@
+---
+title: "Croktile 文档"
+description: "Croktile / TileFlow 参考文档概览与导航。"
+order: 0
+---
+
+Croktile 是一种用于 **TileFlow** 编程的 C++ 嵌入式 DSL：你描述带形状的数据、DMA 搬移与并行区域，编译器将其降级为目标代码（例如 CUDA/Cute），并辅以严格的形状与 DMA 安全检查。
+
+如需更深入的参考，请使用下列页面。若是初次接触，请先阅读 **快速开始**（构建与编译器选项），再浏览 **语法设计**，以及与你任务相关的主题（形状、并行、DMA 或动态维度）。
+
+## 文档地图
+
+- [快速开始](/docs/getting-started) — 从源码构建、`make test`、编译器标志（`-t`、`-es`、`-gs`、`-E` 等）
+- [形状数据操作](/docs/shapes) — 形状、`span` 与符号化维度（概览）
+- [并行执行](/docs/parallel) — SPMD 区域与循环构造（概览）
+- [DMA 与数据搬移](/docs/dma) — DMA 概览与分块
+- [TileFlow 分块优化](/docs/tileflow-optimization) — matmul 与 rgb2gray 示例，使用 `chunkat` 与 `#` 进行分块
+- [异步 DMA 模式](/docs/async-dma-patterns) — future、同步与异步 DMA、`wait`、操作类型
+- [多缓冲](/docs/multi-buffering) — 使用 `dma.any`、`swap` 与 `rotate` 实现双缓冲
+- [语法设计](/docs/syntax-design) — 类型、控制流、DMA 语句、`chunkat`、调用
+- [动态形状](/docs/dynamic-design) — 匿名维度与符号化维度
+- [调用设备函数](/docs/calling-functions) — `call`、模板、目标平台说明
+- [宏与预处理](/docs/macros) — 宏定义、`ifdef`、预处理器与 C++ 的差异
+- [线程掩码](/docs/thread-masking) — `inthreads`、掩码、异步 `inthreads`
+- [参与贡献](/docs/contributing) — 测试与合并请求

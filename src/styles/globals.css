@@ -13,31 +13,31 @@
   --color-mint-900: #14532b;
   --color-mint-950: #052e14;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Noto Sans SC", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 @layer base {
   :root {
-    --background: #ffffff;
+    --background: #f7fdf8;
     --foreground: #0a0a0a;
-    --muted: #f5f5f5;
-    --muted-foreground: #737373;
-    --border: #e5e5e5;
-    --card: #ffffff;
+    --muted: #f0f8f2;
+    --muted-foreground: #6b7c6f;
+    --border: #dde8df;
+    --card: #fafdfb;
     --card-foreground: #0a0a0a;
     --accent: #22c55e;
     --accent-foreground: #052e14;
   }
 
   .dark {
-    --background: #0a0a0a;
-    --foreground: #fafafa;
-    --muted: #1a1a1a;
-    --muted-foreground: #a3a3a3;
-    --border: #262626;
-    --card: #141414;
-    --card-foreground: #fafafa;
+    --background: #090f0b;
+    --foreground: #eaf5ec;
+    --muted: #141e16;
+    --muted-foreground: #8fa393;
+    --border: #1e2d21;
+    --card: #0e170f;
+    --card-foreground: #eaf5ec;
     --accent: #4ade83;
     --accent-foreground: #052e14;
   }
@@ -79,6 +79,31 @@
       transparent 40%
     );
   }
+}
+
+/* Shiki dual-theme: show light in light mode, dark in dark mode */
+html:not(.dark) .shiki-wrapper .shiki .shiki,
+html:not(.dark) .shiki-wrapper [data-theme="dark"] {
+  display: none !important;
+}
+.dark .shiki-wrapper [data-theme="light"] {
+  display: none !important;
+}
+
+/* Prose typography refinements */
+.prose-custom {
+  line-height: 1.8;
+  letter-spacing: 0.01em;
+}
+
+.prose-custom > :first-child {
+  margin-top: 0;
+}
+
+.prose-custom img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 @keyframes cursor-blink {

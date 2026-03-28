@@ -1,0 +1,42 @@
+---
+title: "DMA 与数据搬移"
+description: "DMA 概览与分块操作。"
+order: 3
+---
+
+## DMA 语句
+
+Croktile 使用声明式 DMA 语法简化数据搬移：
+
+```cpp
+dma.copy input.chunkat(tiling_factors) => shared;
+```
+
+这会将 `input` 在指定分块因子下的一块数据搬移到共享内存。
+
+## 使用 ChunkAt 分块
+
+`chunkat` 算子沿指定维度对数据进行分块：
+
+```cpp
+// Tile a [128, 256] tensor into [32, 64] chunks
+shared = dma.copy data.chunkat(4, 4) => smem;
+```
+
+## 多阶段流水线
+
+对于高级优化，可使用多缓冲模式：
+
+```cpp
+parallel (blockIdx) {
+  buf_a = dma.copy input_a.chunkat(bm, 1) => smem;
+  buf_b = dma.copy input_b.chunkat(bn, 1) => smem;
+  
+  within (k : K / bk) {
+    mma buf_a.chunkat(1, bk)
+        buf_b.chunkat(1, bk) => output;
+  }
+}
+```
+
+Croktile 编译器会自动管理描述符配置、偏移计算与内存屏障。

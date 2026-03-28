@@ -17,6 +17,7 @@ export function getHighlighter(): Promise<Highlighter> {
       themes: ["github-light", "github-dark"],
       langs: [
         "cpp",
+        "c",
         "bash",
         "typescript",
         "javascript",
@@ -24,11 +25,20 @@ export function getHighlighter(): Promise<Highlighter> {
         "yaml",
         "markdown",
         "python",
+        "cmake",
+        "makefile",
         choreoLang,
       ],
     });
   }
   return highlighterPromise;
+}
+
+function mapLang(lang: string): string {
+  if (lang === "croktile" || lang === "co" || lang === "choreo") {
+    return "choreo";
+  }
+  return lang;
 }
 
 export async function highlightCode(
@@ -37,17 +47,30 @@ export async function highlightCode(
   theme: string = "github-dark"
 ): Promise<string> {
   const highlighter = await getHighlighter();
-
-  let mappedLang = lang;
-  if (lang === "croktile" || lang === "co" || lang === "choreo") {
-    mappedLang = "choreo";
-  }
-
+  const mapped = mapLang(lang);
   const validLangs = highlighter.getLoadedLanguages();
-  const finalLang = validLangs.includes(mappedLang as any) ? mappedLang : "text";
+  const finalLang = validLangs.includes(mapped as any) ? mapped : "text";
 
   return highlighter.codeToHtml(code, {
     lang: finalLang,
     theme,
+  });
+}
+
+export async function highlightCodeDualTheme(
+  code: string,
+  lang: string = "cpp"
+): Promise<string> {
+  const highlighter = await getHighlighter();
+  const mapped = mapLang(lang);
+  const validLangs = highlighter.getLoadedLanguages();
+  const finalLang = validLangs.includes(mapped as any) ? mapped : "text";
+
+  return highlighter.codeToHtml(code, {
+    lang: finalLang,
+    themes: {
+      light: "github-light",
+      dark: "github-dark",
+    },
   });
 }
