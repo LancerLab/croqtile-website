@@ -25,7 +25,7 @@ jobs:
       - run: npm ci
 
       - name: ESLint
-        run: npm run lint
+        run: npx eslint src/
 
       - name: TypeScript type check
         run: npx tsc --noEmit
@@ -61,6 +61,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          GITHUB_PAGES: "true"
 
       - name: Verify static pages generated
         run: |

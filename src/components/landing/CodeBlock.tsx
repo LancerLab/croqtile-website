@@ -9,7 +9,7 @@ type Props = {
 
 export function CodeBlock({
   code,
-  language = "croktile",
+  _language = "croktile",
   filename,
   highlights = [],
 }: Props) {
