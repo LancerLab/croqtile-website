@@ -6,7 +6,7 @@ order: 3
 
 ## DMA 语句
 
-Croktile 使用声明式 DMA 语法简化数据搬移：
+CroqTile 使用声明式 DMA 语法简化数据搬移：
 
 ```cpp
 dma.copy input.chunkat(tiling_factors) => shared;
@@ -39,4 +39,4 @@ parallel (blockIdx) {
 }
 ```
 
-Croktile 编译器会自动管理描述符配置、偏移计算与内存屏障。
+CroqTile 编译器会自动管理描述符配置、偏移计算与内存屏障。

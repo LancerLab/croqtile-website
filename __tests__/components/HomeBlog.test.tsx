@@ -18,11 +18,11 @@ jest.mock("@/i18n/routing", () => ({
 
 const mockPosts = [
   {
-    title: "Introducing Croktile",
+    title: "Introducing CroqTile",
     description: "Our first blog post",
     date: "2026-03-27",
     author: "Team",
-    slug: "introducing-croktile",
+    slug: "introducing-croqtile",
     tags: ["announcement"],
   },
 ];
@@ -30,7 +30,7 @@ const mockPosts = [
 describe("HomeBlog", () => {
   it("renders blog posts", () => {
     render(<HomeBlog posts={mockPosts} />);
-    expect(screen.getByText("Introducing Croktile")).toBeInTheDocument();
+    expect(screen.getByText("Introducing CroqTile")).toBeInTheDocument();
   });
 
   it("renders the section title", () => {

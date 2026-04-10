@@ -5,7 +5,7 @@ order: 12
 ---
 
 ## Overview
-While Croktile primarily targets SPMD (Single-Program-Multiple-Data) programming, it also supports MPMD (Multiple-Program-Multiple-Data) execution through thread masking. In this section, we demonstrate how to write divergent code using `inthreads` block in Croktile.
+While CroqTile primarily targets SPMD (Single-Program-Multiple-Data) programming, it also supports MPMD (Multiple-Program-Multiple-Data) execution through thread masking. In this section, we demonstrate how to write divergent code using `inthreads` block in CroqTile.
 
 ## Mask the Parallel Threads
 
@@ -22,11 +22,11 @@ Masking is an implementation-level concept. From the perspective of the SPMD pro
 
 It is necessary to have the *divergent* code in SPMD code to handle different real-world requirements. And from a perspective of different programming paradigm, applying *divergent* code in SPMD programs can even mimic MPMD (Multiple Program Multiple Data) behavior. In MPMD, different threads execute different code. Therefore, *divergence* can extend SPMD to MPMD scope conceptually.
 
-In Croktile, we are able to create divergent code via `inthreads` block. Let us dive into the detail.
+In CroqTile, we are able to create divergent code via `inthreads` block. Let us dive into the detail.
 
 ## `inthreads`: Divergent Code with the Thread Mask
 ### Parallel Perspective of Tileflow Programs
-In Croktile, a *divergent* code region is generated with the keyword `inthreads`, where a compare expression followed.
+In CroqTile, a *divergent* code region is generated with the keyword `inthreads`, where a compare expression followed.
 
 Let us have a look at the following example:
 
@@ -51,7 +51,7 @@ __co__  void foo() {
 }
 ```
 
-You may now re-examine Croktile tileflow programs from the perspective of parallelism. It consists of
+You may now re-examine CroqTile tileflow programs from the perspective of parallelism. It consists of
 
 - *Sequential Code*
 - *SPMD-Styled Parallel Code* enclosed in `parallel-by` block, which consists of:
@@ -60,12 +60,12 @@ You may now re-examine Croktile tileflow programs from the perspective of parall
 
 In this example, `p <= 2` initiates the the *divergent code block*, where from the implementation perspective, it creates a thread mask of `000111`, which allows only thread `0`, `1` and `2` to execute the code inside. And thread `3`, `4` and `5` will skip this path. **All threads are forced synchronized after the `inthreads` block**. In this case, it implies thread `3`, `4`, and `5` waits for the completion of the others before stepping forward.
 
-In Croktile, the `inthreads` block looks like a `if` conditional block in C/C++. However, `inthreads` explicit claims the code divergence, which is a concept in SPMD program, rather than the conditional block for sequential code. Therefore, the `inthreads` block:
+In CroqTile, the `inthreads` block looks like a `if` conditional block in C/C++. However, `inthreads` explicit claims the code divergence, which is a concept in SPMD program, rather than the conditional block for sequential code. Therefore, the `inthreads` block:
 
 - Can only appear in the SPMD code region, which is enclosed in the `parallel-by` block.
 - Can only have a comparison result related to thread identifiers.
 
-Croktile compiler has the checks for both the comparison expression and `inthreads`-block placement.
+CroqTile compiler has the checks for both the comparison expression and `inthreads`-block placement.
 
 ### Make it Asynchronous
 Similar to the `parallel-by` statements, it is possible to make the threads with/without executing the divergent code be asynchronous. The following code showcases a example that conduct MPMD execution in the SPMD code:
@@ -120,7 +120,7 @@ The thread mask (`011-0001`) reflects these constraints, where the two levels ar
 The second predicate (`q == 1`) imposes no restriction on the outer level (`p`), allowing all outer IDs (`0, 1, 2`) while restricting the inner level to `q == 1`.
 
 ## Implicit Masking
-In Croktile, code between multiple `parallel-by` levels can be considered as a type of implicit masking. The below code showcases an example:
+In CroqTile, code between multiple `parallel-by` levels can be considered as a type of implicit masking. The below code showcases an example:
 
 ```
 __co__  void foo() {
@@ -137,6 +137,6 @@ __co__  void foo() {
 In this example, there exists two levels of parallelization. The code inside `parallel p by 6` block but outside `parallel q by 2` blocks is conceptually for the outer parallelization only. This means, only one thread from the sub-level parallelization execute the code, which is equivalent to `inthreads (q == 0) { ... }`. Programmers must be aware there is only single thread instance to execute the code part. Only the code inside the inner `parallel-by` is executed by all threads.
 
 ## Quick Summary
-In this section, we examined the motivation for thread masking, which enables divergent code execution for MPMD-style programming within Croktile's SPMD paradigm. Developers can use either explicit thread masking via `inthreads` blocks or implicit control through `parallel-by` constructs to restrict execution to specific threads.
+In this section, we examined the motivation for thread masking, which enables divergent code execution for MPMD-style programming within CroqTile's SPMD paradigm. Developers can use either explicit thread masking via `inthreads` blocks or implicit control through `parallel-by` constructs to restrict execution to specific threads.
 
 While thread masking provides flexibility, it introduces thread asynchrony that complicates coordination. The next section will explore advanced techniques for managing these synchronization challenges.

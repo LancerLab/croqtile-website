@@ -5,22 +5,22 @@ order: 10
 ---
 
 ## Overview
-In current implementation of Croktile functions, it invokes *device function* to implement the specified target computations. In this section, we will learn the detail about the *call statement*s in Croktile.
+In current implementation of CroqTile functions, it invokes *device function* to implement the specified target computations. In this section, we will learn the detail about the *call statement*s in CroqTile.
 
 ## Call Device Functions
 
-To call a device function in the Croktile function, it requires the call statement explicitly led by `call`.
+To call a device function in the CroqTile function, it requires the call statement explicitly led by `call`.
 
 ### Basic Syntax of Call Statements
 
-The general syntax for a `call` statement in Croktile is:
+The general syntax for a `call` statement in CroqTile is:
 
 ```cpp
 call func-name <optional-template-args> (arguments);
 ```
 Here, the keyword `call` is followed by a function name `func-name`, an optional `<>` enclosed template arguments, which are comma-separated. The `arguments` are also comma-separated and listed inside `()` like normal C/C++ functions.
 
-Note that **Croktile transpilation process would not apply any check between the callers and the callees**, including the function existence, function signature consistency, and parameter consistency. It delegates such duties to the target compilation process. Programmers must be careful about the conventions between Croktile function and device function consequently.
+Note that **CroqTile transpilation process would not apply any check between the callers and the callees**, including the function existence, function signature consistency, and parameter consistency. It delegates such duties to the target compilation process. Programmers must be careful about the conventions between CroqTile function and device function consequently.
 
 Beside that, in all the currently supported platform, such calls must be made inside `parallel-by`, since it calls device function which only runs on heterogeneous hardware. Therefore, in the following example, `call bar();` in `mou` is illegal code since it tries to call device function in a code location which is assumed to be host code area.
 
@@ -44,7 +44,7 @@ In current implementation, the argument must be either:
 
 Here, the scalar *integer* type only includes `int`, whereas the scalar *floating-point type* includes `float`, `double`, `half`, `bfp16`, and `half8`. However, since the target-platform differs in floating-point support, the *floating-point type* parameter also varies for different target platforms.
 
-In addition, **operations on floating-point are not supported** by Croktile till now, considering the floating is not useful for tileflow programs. Instead, they are typically values for device computation, which the *tileflow program*s pass such values directly to device kernels.
+In addition, **operations on floating-point are not supported** by CroqTile till now, considering the floating is not useful for tileflow programs. Instead, they are typically values for device computation, which the *tileflow program*s pass such values directly to device kernels.
 
 The below code showcases an example:
 
@@ -61,15 +61,15 @@ __co__ void foobar(f32 [M, 24] input, int N, float padding) {
 }
 ```
 
-In this example, it passes different data types as arguments from Croktile function to the device functions, which matches the device parameters exactly. Note that in the device function, the **corresponding parameter type of the *spanned data* argument is simply the pointer of its _element type_**, where the shape information is dropped. For example, the `foo`'s argument `p` is `float*`, which corresponds the *spanned data* argument `input.data`. In Croktile, we names the parameter as a **decayed** pointer of the *spanned data*. If using other form like `float p[]`, it will trigger failure in target compilation stage.
+In this example, it passes different data types as arguments from CroqTile function to the device functions, which matches the device parameters exactly. Note that in the device function, the **corresponding parameter type of the *spanned data* argument is simply the pointer of its _element type_**, where the shape information is dropped. For example, the `foo`'s argument `p` is `float*`, which corresponds the *spanned data* argument `input.data`. In CroqTile, we names the parameter as a **decayed** pointer of the *spanned data*. If using other form like `float p[]`, it will trigger failure in target compilation stage.
 
-For some types like `f16`, and `bf16`, there may not be native target support of such types, it is possible to utilize `croktile::f16` and `croktile::bf16` to handle such types.
+For some types like `f16`, and `bf16`, there may not be native target support of such types, it is possible to utilize `croqtile::f16` and `croqtile::bf16` to handle such types.
 
 ## Instantiate the Function Template for Call
 
 ### Trigger C++ Template Instantiation
 
-It is possible for Croktile code to make function call to a template function. For example:
+It is possible for CroqTile code to make function call to a template function. For example:
 
 ```cpp
 template<int M, int N, int K>
@@ -88,7 +88,7 @@ __co__ auto matmul(s32 [96, 72] lhs, s32 [72, 24] rhs) {
 ```
 In this case, it defines device function template named `matmul_kernel`, which takes three template parameters. As the caller specified the template function arguments, it triggers the instantiation of the function template, which results in a template function `matmul<16, 4, 72>` for the call.
 
-So in Croktile, calling a template function is similar to those in C++. However, **the template argument passed must be able to be inferred as compile time constant value** by Croktile compiler. Therefore, any runtime values can result in error.
+So in CroqTile, calling a template function is similar to those in C++. However, **the template argument passed must be able to be inferred as compile time constant value** by CroqTile compiler. Therefore, any runtime values can result in error.
 
 ```cpp
 __co__ void foo(int M) {
@@ -98,11 +98,11 @@ __co__ void foo(int M) {
 }
 ```
 
-Croktile compiler could inference values as much as possible at compile time. If the template argument can not be inferred, the compilation will abort and error will be emitted.
+CroqTile compiler could inference values as much as possible at compile time. If the template argument can not be inferred, the compilation will abort and error will be emitted.
 
 ### *Factor* Target Specific Details
 
-In some target like *factor*, it requires the device function to follow C-linkage, where the device functions must be prefixed with `extern "C"`. Since template functions can not be applies to functions with C-linkage, Croktile has some wrapper tricks to enable it. For example:
+In some target like *factor*, it requires the device function to follow C-linkage, where the device functions must be prefixed with `extern "C"`. Since template functions can not be applies to functions with C-linkage, CroqTile has some wrapper tricks to enable it. For example:
 
 ```cpp
 __cok__ {
@@ -129,9 +129,9 @@ __co__ void foo() {
 }
 ```
 
-As the comment depicts, Croktile compiler may generate a specialization version of function template `bar<3>`, which enables the function template as well. But note that, the function template no longer requires `extern "C" decoration` as those for normal *factor* device functions.
+As the comment depicts, CroqTile compiler may generate a specialization version of function template `bar<3>`, which enables the function template as well. But note that, the function template no longer requires `extern "C" decoration` as those for normal *factor* device functions.
 
-As the implementation is different with other targets, you may utilize `-kt` to enable such functionality for *croktile-factor* compilation.
+As the implementation is different with other targets, you may utilize `-kt` to enable such functionality for *croqtile-factor* compilation.
 
 
 

@@ -5,13 +5,13 @@ order: 9
 ---
 
 ## Overview
-In this section, you will learn about the *anonymous dimension* and *symbolic dimension* in Croktile and how they support dynamic shapes required by certain systems.
+In this section, you will learn about the *anonymous dimension* and *symbolic dimension* in CroqTile and how they support dynamic shapes required by certain systems.
 
 ## Fixed and Dynamic Shape
 Data with fixed shapes is commonly used in high-performance computing kernels, allowing for aggressive optimization with known dimensions. However, certain scenarios require handling shapes with runtime dimensions, known as dynamic shapes. This necessitates kernel generality to manage inputs of varying shapes, a feature highlighted by many machine learning frameworks.
 
 ## *mdspan* with **Anonymous Dimension**
-Croktile supports shape dimensions with unknown values, similar to many high-level machine learning languages. The simplest method is to use **Anonymous Dimension** in `mdspan`:
+CroqTile supports shape dimensions with unknown values, similar to many high-level machine learning languages. The simplest method is to use **Anonymous Dimension** in `mdspan`:
 
 ```cpp
 __co__ auto foo(s32 [?, 1, 2] input) { ... }
@@ -21,7 +21,7 @@ Here, the question mark `?` represents a compile-time unknown value. Any positiv
 
 ```cpp
 void bar(int * data, int dim0) {
-  foo(croktile::make_spanview<3>(data, {dim0, 1, 2}));
+  foo(croqtile::make_spanview<3>(data, {dim0, 1, 2}));
 }
 ```
 
@@ -31,7 +31,7 @@ The *anonymous dimension* can work properly for this case. However, in certain s
 
 ## Step Further: **Symbolic Dimension**
 
-Another approach in Croktile to support dynamic shape is to use **Symbolic Dimension**. *Symbolic dimension*s are named but as well unknown at compile-time. Here's an example:
+Another approach in CroqTile to support dynamic shape is to use **Symbolic Dimension**. *Symbolic dimension*s are named but as well unknown at compile-time. Here's an example:
 
 ```cpp
 __co__ auto Matmul(s32 [M, K] lhs, s32 [K, N] rhs) {
@@ -46,7 +46,7 @@ __co__ auto Matmul(s32 [M, K] lhs, s32 [K, N] rhs) {
 In the code, each dimension is given a symbolic name (`M, K, N` in this case) for the *spanned* inputs. Compared to *anonymous dimension*, *symbolic dimension* approach clearly describes the relationship between shapes. The code looks intuitive and is easy to maintain. Furthermore, it is possible to improve the code safety with the additional information provided. Let us dive deeper for this.
 
 ## Improved Code Safety
-The reason for improved code safety of using *symbolic dimension* is that more comprehensive code checks can be applied by Croktile compiler. For example, consider an *anonymous dimension* version of the `Matmul` function:
+The reason for improved code safety of using *symbolic dimension* is that more comprehensive code checks can be applied by CroqTile compiler. For example, consider an *anonymous dimension* version of the `Matmul` function:
 
 ```cpp
 __co__ auto Matmul(s32 [?, ?] lhs, s32 [?, ?] rhs) {
@@ -59,33 +59,33 @@ __co__ auto Matmul(s32 [?, ?] lhs, s32 [?, ?] rhs) {
 }
 ```
 
-Croktile performs both compile-time and runtime checks to ensure safety:
+CroqTile performs both compile-time and runtime checks to ensure safety:
 
-- **Compile-time Checks**: Croktile verifies rank consistency. In this example, `lhs.span` has a ranked of `2`, matching the rank of `{tile_m, tile_k}`, so there are no issues.
-- **Runtime Checks**: Croktile generates code to validate dimensions at runtime. For instance, in the declaration of `tiled_lhs`, its shape must not have a dimension of `0`, which would result in an invalid zero-sized buffer. Croktile's *transpilation* process generates the following *target host code*:
+- **Compile-time Checks**: CroqTile verifies rank consistency. In this example, `lhs.span` has a ranked of `2`, matching the rank of `{tile_m, tile_k}`, so there are no issues.
+- **Runtime Checks**: CroqTile generates code to validate dimensions at runtime. For instance, in the declaration of `tiled_lhs`, its shape must not have a dimension of `0`, which would result in an invalid zero-sized buffer. CroqTile's *transpilation* process generates the following *target host code*:
 
 ```cpp
-void __croktile_transpiled_Matmul(croktile::span_view<2, croktile::s32> lhs,
-                                croktile::span_view<2, croktile::s32> rhs) {
-  croktile_assert(lhs.shape()[0] / 32 > 0,
+void __croqtile_transpiled_Matmul(croqtile::span_view<2, croqtile::s32> lhs,
+                                croqtile::span_view<2, croqtile::s32> rhs) {
+  croqtile_assert(lhs.shape()[0] / 32 > 0,
                 "the 0 dimension of 'lhs' may result in spanned data "
                 "with a dimension value of 0.");
   // ...
 }
 ```
 
-Here, the `croktile_abort` function aborts program execution if the condition is not met. This early check helps Croktile detect issues promptly.
+Here, the `croqtile_abort` function aborts program execution if the condition is not met. This early check helps CroqTile detect issues promptly.
 
-For the *symbolic dimension* version, Croktile compiler generates additional checks in the *target host code*:
+For the *symbolic dimension* version, CroqTile compiler generates additional checks in the *target host code*:
 
 ```cpp
-void __croktile_transpiled_Matmul(croktile::span_view<2, croktile::s32> lhs,
-                                croktile::span_view<2, croktile::s32> rhs) {
+void __croqtile_transpiled_Matmul(croqtile::span_view<2, croqtile::s32> lhs,
+                                croqtile::span_view<2, croqtile::s32> rhs) {
   // additional check happens only when using symbolic dimensions
-  croktile_assert(lhs.shape()[1] == rhs.shape()[0],
+  croqtile_assert(lhs.shape()[1] == rhs.shape()[0],
                 "dimension 'K' is not consistent.");
 
-  croktile_assert(lhs.shape()[0] / 32 > 0,
+  croqtile_assert(lhs.shape()[0] / 32 > 0,
                 "the 0 dimension of 'lhs' may result in spanned data "
                 "with a dimension value of 0.");
   // ...
@@ -97,13 +97,13 @@ In addition to the checks performed in the *anonymous dimension* version, the *s
 Therefore, it is recommended that programmers use symbolic dimensions not only for ease of use but also to enhance code safety.
 
 ## Cost and Limitations
-To support dynamic shapes, Croktile compile has to be conservative at compile time. This limitation restricts certain compile-time checks and necessitates some checks to be performed at runtime instead. Although the implementation aims to minimize overhead by placing these checks in the host code, they **remain more conservative compared to code with fixed-sized shapes**. Programmers should be mindful of this situation and may need to add user-level assertions to enhance code safety when necessary.
+To support dynamic shapes, CroqTile compile has to be conservative at compile time. This limitation restricts certain compile-time checks and necessitates some checks to be performed at runtime instead. Although the implementation aims to minimize overhead by placing these checks in the host code, they **remain more conservative compared to code with fixed-sized shapes**. Programmers should be mindful of this situation and may need to add user-level assertions to enhance code safety when necessary.
 
-A significant limitation of both *anonymous dimension* and *symbolic dimension* is that they can **only be applied to the *spanned data* in parameter lists**. Dimensions of buffers declared within Croktile functions cannot be made dynamic. For example, the following code will result in a compile-time error:
+A significant limitation of both *anonymous dimension* and *symbolic dimension* is that they can **only be applied to the *spanned data* in parameter lists**. Dimensions of buffers declared within CroqTile functions cannot be made dynamic. For example, the following code will result in a compile-time error:
 
 ```cpp
 __co__ void foo() { f32 [M] d;} // compile-time error: can not applied to the spanned buffer
 ```
 
 ## Quick Summary
-IIn this section, we discussed *anonymous dimension* and *symbolic dimension* in Croktile, which support dynamic shapes required in certain scenarios. Compared to *anonymous dimension*, using *symbolic dimension* enhance code safety through additional compile-time checks, making them the recommended choice for ease of use and improved safety.
+IIn this section, we discussed *anonymous dimension* and *symbolic dimension* in CroqTile, which support dynamic shapes required in certain scenarios. Compared to *anonymous dimension*, using *symbolic dimension* enhance code safety through additional compile-time checks, making them the recommended choice for ease of use and improved safety.

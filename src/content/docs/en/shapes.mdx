@@ -1,12 +1,12 @@
 ---
 title: "Shaped Data Manipulation"
-description: "How Croktile handles multi-dimensional data with compile-time shape checking."
+description: "How CroqTile handles multi-dimensional data with compile-time shape checking."
 order: 2
 ---
 
 ## Shape Declarations
 
-In Croktile, data types include shape information directly:
+In CroqTile, data types include shape information directly:
 
 ```cpp
 f32 [8, 4, 12] shaped_data;
@@ -16,7 +16,7 @@ This declares a 3-dimensional tensor of 32-bit floats with shape `[8, 4, 12]`.
 
 ## Shape Operations
 
-Croktile provides powerful shape manipulation with `span`:
+CroqTile provides powerful shape manipulation with `span`:
 
 ```cpp
 new_shape : shaped_data.span { (0)/2, (1)/4, 1, (2) };

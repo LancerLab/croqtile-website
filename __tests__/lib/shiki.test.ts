@@ -28,9 +28,11 @@ describe("shiki highlighting", () => {
     expect(html).toContain("<pre>");
   });
 
-  it("maps croktile/co to cpp", async () => {
-    const html = await highlightCode("f32 x;", "croktile");
-    expect(html).toContain("f32 x;");
+  it("maps croktile/croqtile/co to choreo grammar", async () => {
+    const htmlLegacy = await highlightCode("f32 x;", "croktile");
+    expect(htmlLegacy).toContain("f32 x;");
+    const htmlNew = await highlightCode("f32 x;", "croqtile");
+    expect(htmlNew).toContain("f32 x;");
   });
 
   it("returns singleton highlighter", async () => {

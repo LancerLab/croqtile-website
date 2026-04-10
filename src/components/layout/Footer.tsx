@@ -7,25 +7,24 @@ export function Footer() {
   const t = useTranslations("footer");
   const year = new Date().getFullYear();
 
+  const tutorialBase = "https://codes1gn.github.io/croqtile-tutorial";
+
   const sections = [
     {
       title: t("product"),
       links: [
-        { label: t("tutorials"), href: "/tutorials" },
-        { label: t("docs"), href: "/docs" },
+        { label: t("tutorials"), href: `${tutorialBase}/tutorial/`, external: true },
+        { label: t("docs"), href: `${tutorialBase}/documentation/`, external: true },
       ],
     },
     {
       title: t("resources"),
-      links: [
-        { label: t("changelog"), href: "/changelog" },
-        { label: t("blog"), href: "/blog" },
-      ],
+      links: [{ label: t("changelog"), href: "/changelog" }],
     },
     {
       title: t("community"),
       links: [
-        { label: t("github"), href: "https://github.com/LancerLab/croktile", external: true },
+        { label: t("github"), href: "https://github.com/LancerLab/croqtile", external: true },
       ],
     },
   ];
@@ -38,7 +37,7 @@ export function Footer() {
             <Link href="/" className="flex items-center gap-2.5">
               <img
               src="/logo-mascot.png"
-              alt="Croktile"
+              alt="CroqTile"
               className="h-8 w-8 rounded-md object-contain"
               />
               <span className="text-lg font-bold tracking-tight">
@@ -80,7 +79,7 @@ export function Footer() {
         </div>
         <div className="mt-12 pt-8 border-t flex flex-col items-center gap-4">
           <a
-            href="https://github.com/LancerLab/croktile"
+            href="https://github.com/LancerLab/croqtile"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border hover:bg-[var(--muted)] transition-colors text-sm"
@@ -91,7 +90,7 @@ export function Footer() {
             Star on GitHub
           </a>
           <p className="text-xs text-[var(--muted-foreground)]">
-            Built with care by the Croktile Team
+            Built with care by the CroqTile Team
           </p>
           <p className="text-sm text-[var(--muted-foreground)]">
             {t("copyright", { year })}

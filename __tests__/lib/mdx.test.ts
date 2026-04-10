@@ -41,7 +41,7 @@ describe("mdx content utilities", () => {
     it("reads docs content with frontmatter", () => {
       const item = getContentBySlug("docs", "index", "en");
       expect(item).not.toBeNull();
-      expect(item!.meta.title).toBe("Croktile documentation");
+      expect(item!.meta.title).toBe("CroqTile documentation");
       expect(item!.meta.order).toBe(0);
       expect(item!.content).toContain("## Documentation map");
 
@@ -54,7 +54,7 @@ describe("mdx content utilities", () => {
     it("reads blog content with date and tags", () => {
       const item = getContentBySlug("blog", "hello-world", "en");
       expect(item).not.toBeNull();
-      expect(item!.meta.title).toBe("Introducing Croktile");
+      expect(item!.meta.title).toBe("Introducing CroqTile");
       expect(item!.meta.date).toBe("2026-03-27");
       expect(item!.meta.tags).toContain("announcement");
     });

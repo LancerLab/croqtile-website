@@ -24,7 +24,7 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("Footer", () => {
-  it("renders the croktile brand", () => {
+  it("renders the croqtile brand", () => {
     renderWithProviders(<Footer />);
     expect(screen.getByText("Crok")).toBeInTheDocument();
     expect(screen.getByText("Tile")).toBeInTheDocument();
@@ -35,14 +35,13 @@ describe("Footer", () => {
     expect(screen.getByText("Tutorials")).toBeInTheDocument();
     expect(screen.getByText("Documentation")).toBeInTheDocument();
     expect(screen.getByText("Changelog")).toBeInTheDocument();
-    expect(screen.getByText("Blog")).toBeInTheDocument();
   });
 
   it("renders copyright with current year", () => {
     renderWithProviders(<Footer />);
     const year = new Date().getFullYear();
     expect(
-      screen.getByText(`© ${year} Croktile. All rights reserved.`)
+      screen.getByText(`© ${year} CroqTile. All rights reserved.`)
     ).toBeInTheDocument();
   });
 

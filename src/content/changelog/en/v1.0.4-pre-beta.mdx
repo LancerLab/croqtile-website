@@ -1,0 +1,21 @@
+---
+title: "CroqTile v1.0.4 pre-beta"
+date: "2026-04-09"
+---
+
+### Performance
+
+- Fix O(N²) codegen offset accumulation and regex bottleneck — significant compilation speedup for large kernels
+
+### Bug Fixes
+
+- Fix MMA NodeIndex in value numbering pass
+- Always commit warpgroup before WGMMA store — correctness fix for warp-specialized kernels
+
+### SDK
+
+- SDK infrastructure updates
+
+### Documentation
+
+- Add coding style guide for contributors

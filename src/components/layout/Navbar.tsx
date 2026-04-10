@@ -7,12 +7,13 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LangSwitch } from "./LangSwitch";
 import { useEffect, useState } from "react";
 
+const TUTORIAL_BASE = "https://codes1gn.github.io/croqtile-tutorial";
+
 const navLinks = [
   { href: "/", labelKey: "product" },
-  { href: "/tutorials", labelKey: "tutorials" },
-  { href: "/docs", labelKey: "docs" },
+  { href: `${TUTORIAL_BASE}/tutorial/`, labelKey: "tutorials", external: true },
+  { href: `${TUTORIAL_BASE}/documentation/`, labelKey: "docs", external: true },
   { href: "/changelog", labelKey: "changelog" },
-  { href: "/blog", labelKey: "blog" },
 ] as const;
 
 export function Navbar() {
@@ -46,7 +47,7 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <img
               src="/logo-mascot.png"
-              alt="Croktile"
+              alt="CroqTile"
               className="h-9 w-9 rounded-md object-contain"
             />
             <span className="text-lg font-bold tracking-tight">
@@ -56,26 +57,30 @@ export function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-1">
-            {navLinks.map(({ href, labelKey }) => (
-              <Link
-                key={labelKey}
-                href={href}
-                className={`px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
-                  isActive(href)
-                    ? "text-mint-500 bg-mint-500/10"
-                    : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]"
-                }`}
-              >
-                {t(labelKey)}
-              </Link>
-            ))}
+            {navLinks.map(({ href, labelKey, ...rest }) => {
+              const isExt = "external" in rest && rest.external;
+              const cls = `px-3 py-2 text-sm font-medium transition-colors rounded-lg ${
+                !isExt && isActive(href)
+                  ? "text-mint-500 bg-mint-500/10"
+                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]"
+              }`;
+              return isExt ? (
+                <a key={labelKey} href={href} target="_blank" rel="noopener noreferrer" className={cls}>
+                  {t(labelKey)}
+                </a>
+              ) : (
+                <Link key={labelKey} href={href} className={cls}>
+                  {t(labelKey)}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="flex items-center gap-1">
             <LangSwitch />
             <ThemeToggle />
             <a
-              href="https://github.com/LancerLab/croktile"
+              href="https://github.com/LancerLab/croqtile"
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:inline-flex ml-2 px-4 py-2 text-sm font-medium
@@ -105,20 +110,23 @@ export function Navbar() {
 
         {mobileOpen && (
           <div className="md:hidden border-t py-4 space-y-1">
-            {navLinks.map(({ href, labelKey }) => (
-              <Link
-                key={labelKey}
-                href={href}
-                className={`block px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  isActive(href)
-                    ? "text-mint-500 bg-mint-500/10"
-                    : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]"
-                }`}
-                onClick={() => setMobileOpen(false)}
-              >
-                {t(labelKey)}
-              </Link>
-            ))}
+            {navLinks.map(({ href, labelKey, ...rest }) => {
+              const isExt = "external" in rest && rest.external;
+              const cls = `block px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                !isExt && isActive(href)
+                  ? "text-mint-500 bg-mint-500/10"
+                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]"
+              }`;
+              return isExt ? (
+                <a key={labelKey} href={href} target="_blank" rel="noopener noreferrer" className={cls} onClick={() => setMobileOpen(false)}>
+                  {t(labelKey)}
+                </a>
+              ) : (
+                <Link key={labelKey} href={href} className={cls} onClick={() => setMobileOpen(false)}>
+                  {t(labelKey)}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

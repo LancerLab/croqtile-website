@@ -35,7 +35,12 @@ export function getHighlighter(): Promise<Highlighter> {
 }
 
 function mapLang(lang: string): string {
-  if (lang === "croktile" || lang === "co" || lang === "choreo") {
+  if (
+    lang === "croktile" ||
+    lang === "croqtile" ||
+    lang === "co" ||
+    lang === "choreo"
+  ) {
     return "choreo";
   }
   return lang;

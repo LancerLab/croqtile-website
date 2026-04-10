@@ -67,7 +67,7 @@ iter110: SW pipelined metadata → 388 TFLOPS
   },
   {
     label: "Context Fit",
-    content: `Why Croktile fits AI tuning:
+    content: `Why CroqTile fits AI tuning:
 
 Kernel:    15 lines of .co  (vs 95 CUDA lines)
 Context:   412 characters    (fits in one window)

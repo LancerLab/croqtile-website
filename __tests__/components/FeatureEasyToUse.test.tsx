@@ -27,13 +27,13 @@ describe("FeatureEasyToUse", () => {
 
   it("renders code comparison labels", () => {
     renderWithProviders(<FeatureEasyToUse />);
-    expect(screen.getAllByText("Croktile").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("CroqTile").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Triton").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders the LoC comparison bar chart", () => {
     renderWithProviders(<FeatureEasyToUse />);
-    expect(screen.getByText("CROKTILE")).toBeInTheDocument();
+    expect(screen.getByText("CROQTILE")).toBeInTheDocument();
     expect(screen.getByText(/Lines of code/)).toBeInTheDocument();
   });
 

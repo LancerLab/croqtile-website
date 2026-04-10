@@ -26,7 +26,7 @@ export function HomeChangelog({ entries }: Props) {
               href="/changelog"
               className="text-sm text-mint-600 dark:text-mint-400 hover:underline"
             >
-              See what&apos;s new in Croktile →
+              See what&apos;s new in CroqTile →
             </Link>
           </div>
         </ScrollReveal>

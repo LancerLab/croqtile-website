@@ -5,13 +5,13 @@ order: 6
 ---
 
 ## 概述
-本节将介绍 Croktile 中的*匿名维度（anonymous dimension）*与*符号化维度（symbolic dimension）*，以及它们如何满足某些系统所需的动态形状。
+本节将介绍 CroqTile 中的*匿名维度（anonymous dimension）*与*符号化维度（symbolic dimension）*，以及它们如何满足某些系统所需的动态形状。
 
 ## 固定形状与动态形状
 固定形状的数据常用于高性能计算内核，便于在已知维度下进行积极优化。然而，某些场景需要处理运行时才能确定的维度，即**动态形状**。这就要求内核具有足够的通用性以处理不同形状的输入，许多机器学习框架都强调这一能力。
 
 ## 带**匿名维度**的 *mdspan*
-Croktile 支持取值未知的形状维度，与许多高层机器学习语言类似。最简单的方法是在 `mdspan` 中使用**匿名维度（Anonymous Dimension）**：
+CroqTile 支持取值未知的形状维度，与许多高层机器学习语言类似。最简单的方法是在 `mdspan` 中使用**匿名维度（Anonymous Dimension）**：
 
 ```choreo
 __co__ auto foo(s32 [?, 1, 2] input) { ... }
@@ -31,7 +31,7 @@ void bar(int * data, int dim0) {
 
 ## 更进一步：**符号化维度（Symbolic Dimension）**
 
-Croktile 支持动态形状的另一种方式是使用**符号化维度（Symbolic Dimension）**。*符号化维度*具名，但在编译期同样未知。示例如下：
+CroqTile 支持动态形状的另一种方式是使用**符号化维度（Symbolic Dimension）**。*符号化维度*具名，但在编译期同样未知。示例如下：
 
 ```choreo
 __co__ auto Matmul(s32 [M, K] lhs, s32 [K, N] rhs) {
@@ -46,7 +46,7 @@ __co__ auto Matmul(s32 [M, K] lhs, s32 [K, N] rhs) {
 在代码中，每个 *spanned* 输入的维度都给出了符号名（本例中为 `M, K, N`）。与*匿名维度*相比，*符号化维度*能清晰描述形状之间的关系，代码直观、易于维护。此外，还可以利用额外信息提升代码安全性。下面进一步说明。
 
 ## 更强的代码安全性
-使用*符号化维度*能提高代码安全性的原因在于，Croktile 编译器可以据此执行更全面的检查。例如，考虑 `Matmul` 函数的*匿名维度*版本：
+使用*符号化维度*能提高代码安全性的原因在于，CroqTile 编译器可以据此执行更全面的检查。例如，考虑 `Matmul` 函数的*匿名维度*版本：
 
 ```choreo
 __co__ auto Matmul(s32 [?, ?] lhs, s32 [?, ?] rhs) {
@@ -59,10 +59,10 @@ __co__ auto Matmul(s32 [?, ?] lhs, s32 [?, ?] rhs) {
 }
 ```
 
-Croktile 同时执行编译期与运行时检查以保证安全：
+CroqTile 同时执行编译期与运行时检查以保证安全：
 
-- **编译期检查**：Croktile 校验秩一致性。在此例中，`lhs.span` 的秩为 `2`，与 `{tile_m, tile_k}` 的秩一致，因此没有问题。
-- **运行时检查**：Croktile 生成在运行时校验维度的代码。例如，在 `tiled_lhs` 的声明中，其形状不能出现为 `0` 的维度，否则会产生无效的零大小缓冲区。Croktile 的*转译（transpilation）*过程会生成如下*目标主机代码*：
+- **编译期检查**：CroqTile 校验秩一致性。在此例中，`lhs.span` 的秩为 `2`，与 `{tile_m, tile_k}` 的秩一致，因此没有问题。
+- **运行时检查**：CroqTile 生成在运行时校验维度的代码。例如，在 `tiled_lhs` 的声明中，其形状不能出现为 `0` 的维度，否则会产生无效的零大小缓冲区。CroqTile 的*转译（transpilation）*过程会生成如下*目标主机代码*：
 
 ```cpp
 void __choreo_transpiled_Matmul(choreo::span_view<2, choreo::s32> lhs,
@@ -74,9 +74,9 @@ void __choreo_transpiled_Matmul(choreo::span_view<2, choreo::s32> lhs,
 }
 ```
 
-这里，若条件不满足，`choreo_assert` 会中止程序执行。这种前置检查有助于 Croktile 尽早发现问题。
+这里，若条件不满足，`choreo_assert` 会中止程序执行。这种前置检查有助于 CroqTile 尽早发现问题。
 
-对于*符号化维度*版本，Croktile 编译器会在*目标主机代码*中生成额外检查：
+对于*符号化维度*版本，CroqTile 编译器会在*目标主机代码*中生成额外检查：
 
 ```cpp
 void __choreo_transpiled_Matmul(choreo::span_view<2, choreo::s32> lhs,
@@ -97,13 +97,13 @@ void __choreo_transpiled_Matmul(choreo::span_view<2, choreo::s32> lhs,
 因此，建议程序员使用符号化维度，不仅为了易用，也为了提升代码安全性。
 
 ## 代价与限制
-为支持动态形状，Croktile 编译器在编译期必须采取保守策略。这一限制会削弱部分编译期检查，并迫使部分检查改在运行时进行。尽管实现尽量将这些检查放在主机代码中以降低开销，与**固定大小形状**的代码相比，它们**仍然更保守**。程序员应了解这一情况，必要时可补充用户级断言以加强安全性。
+为支持动态形状，CroqTile 编译器在编译期必须采取保守策略。这一限制会削弱部分编译期检查，并迫使部分检查改在运行时进行。尽管实现尽量将这些检查放在主机代码中以降低开销，与**固定大小形状**的代码相比，它们**仍然更保守**。程序员应了解这一情况，必要时可补充用户级断言以加强安全性。
 
-*匿名维度*与*符号化维度*的一个重要限制是：**只能用于参数列表中的 *spanned data***。在 Croktile 函数内声明的缓冲区维度不能设为动态。例如，以下代码会产生编译期错误：
+*匿名维度*与*符号化维度*的一个重要限制是：**只能用于参数列表中的 *spanned data***。在 CroqTile 函数内声明的缓冲区维度不能设为动态。例如，以下代码会产生编译期错误：
 
 ```choreo
 __co__ void foo() { f32 [M] d;} // compile-time error: can not applied to the spanned buffer
 ```
 
 ## 快速小结
-本节讨论了 Croktile 中的*匿名维度*与*符号化维度*，它们可在特定场景下支持所需的动态形状。与*匿名维度*相比，使用*符号化维度*可通过额外编译期检查增强代码安全性，因此在易用性与安全性上都是推荐做法。
+本节讨论了 CroqTile 中的*匿名维度*与*符号化维度*，它们可在特定场景下支持所需的动态形状。与*匿名维度*相比，使用*符号化维度*可通过额外编译期检查增强代码安全性，因此在易用性与安全性上都是推荐做法。

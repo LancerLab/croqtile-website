@@ -9,15 +9,10 @@ import { HighlightedCode } from "./HighlightedCode";
 
 const comparisons = [
   {
-    label: "Croktile",
-    lines: 36,
+    label: "CroqTile",
+    lines: 25,
     file: "matmul_hilbert.co",
-    code: `__co__ void matmul(
-    global f16 [M, K] lhs,
-    global f16 [N, K] rhs,
-    global f16 [M, N] output,
-    global s32 [T] schedule_m,
-    global s32 [T] schedule_n) {
+    code: `__co__ void matmul(global f16 [M, K] lhs, global f16 [N, K] rhs, global f16 [M, N] output, global s32 [T] schedule_m, global s32 [T] schedule_n) {
   int total = cdiv(M, WARP_M) * cdiv(N, WARP_N);
   parallel block_id by NUM_SMS : block {
     shared f16 [WARP_M, TILE_K] lhs_s;
@@ -30,12 +25,8 @@ const comparisons = [
         int bn = schedule_n.at(tile_id);
         mc = mma.fill.f16 0.0f;
         foreach {iv_k} in [cdiv(K, TILE_K)] {
-          tma.copy.swiz<128>
-            lhs.subspan(WARP_M, TILE_K)
-              .at(bm, iv_k) => lhs_s;
-          tma.copy.swiz<128>
-            rhs.subspan(WARP_N, TILE_K)
-              .at(bn, iv_k) => rhs_s;
+          tma.copy.swiz<128> lhs.subspan(WARP_M, TILE_K).at(bm, iv_k) => lhs_s;
+          tma.copy.swiz<128> rhs.subspan(WARP_N, TILE_K).at(bn, iv_k) => rhs_s;
           parallel p by 1 : group-4 {
             ma = mma.load.swiz<128> lhs_s;
             mb = mma.load.swiz<128> rhs_s;
@@ -43,8 +34,7 @@ const comparisons = [
           }
         }
         mma.store mc, out_s;
-        tma.copy out_s => output.subspan(
-          WARP_M, WARP_N).at(bm, bn);
+        tma.copy out_s => output.subspan(WARP_M, WARP_N).at(bm, bn);
       }
     }
   }
@@ -52,6 +42,41 @@ const comparisons = [
     highlight: true,
     lang: "choreo",
     source: "",
+  },
+  {
+    label: "Croqtile-Python",
+    lines: 25,
+    file: "matmul_tma.py",
+    code: `import croq
+
+M, N, K = 128, 128, 64
+WARP_M, WARP_N, TILE_K = 64, 64, 64
+
+@croq.co
+def matmul(lhs: croq.f16[M, K], rhs: croq.f16[N, K]) -> croq.f16[M, N]:
+    output = croq.declare(croq.f16[M, N], "output")
+    for bm, bn in croq.parallel(bm=M // WARP_M, bn=N // WARP_N, scope=croq.BLOCK):
+        lhs_s = croq.declare(croq.f16[WARP_M, TILE_K], "lhs_s", storage=croq.SHARED)
+        rhs_s = croq.declare(croq.f16[WARP_N, TILE_K], "rhs_s", storage=croq.SHARED)
+        mc = croq.mma.fill(0.0, dtype=croq.f32)
+        for iv_k in croq.foreach(iv_k=K // TILE_K):
+            croq.tma.copy(lhs.subspan(WARP_M, TILE_K).at(bm, iv_k), lhs_s, swizzle=128)
+            croq.tma.copy(rhs.subspan(WARP_N, TILE_K).at(bn, iv_k), rhs_s, swizzle=128)
+            for p in croq.parallel(p=1, scope="group-4"):
+                ma = croq.mma.load(lhs_s, swizzle=128)
+                mb = croq.mma.load(rhs_s, swizzle=128)
+                mc = croq.mma.exec(mc, ma, mb, method="row.row")
+        out_s = croq.declare(croq.f16[WARP_M, WARP_N], "out_s", storage=croq.SHARED)
+        croq.mma.store(mc, out_s)
+        croq.tma.copy(out_s, output.subspan(WARP_M, WARP_N).at(bm, bn))
+    return output
+
+prog = croq.Program()
+prog.add(matmul)
+print(prog.dump_ast())`,
+    highlight: true,
+    lang: "python",
+    source: "LancerLab/CroqPy",
   },
   {
     label: "Triton",
@@ -534,7 +559,7 @@ export function FeatureEasyToUse() {
               </span>
               {comparisons[activeCode].highlight && (
                 <span className="ml-auto px-2 py-0.5 rounded text-[10px] font-bold bg-mint-500/15 text-mint-500">
-                  CROKTILE
+                  CROQTILE
                 </span>
               )}
             </div>

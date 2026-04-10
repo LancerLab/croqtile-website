@@ -13,7 +13,7 @@ export default async function BlogListPage({ params }: Props) {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 className="text-3xl font-bold mb-2">Blog</h1>
       <p className="text-[var(--muted-foreground)] mb-10">
-        News, updates, and technical deep dives from the Croktile team.
+        News, updates, and technical deep dives from the CroqTile team.
       </p>
 
       {posts.length === 0 ? (

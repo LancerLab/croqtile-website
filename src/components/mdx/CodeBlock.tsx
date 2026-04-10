@@ -4,6 +4,7 @@ import { CopyButton } from "./CopyButton";
 const LANG_LABELS: Record<string, string> = {
   choreo: "Choreo",
   croktile: "Choreo",
+  croqtile: "Choreo",
   co: "Choreo",
   cpp: "C++",
   c: "C",

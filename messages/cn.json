@@ -9,6 +9,7 @@
     "github": "GitHub"
   },
   "hero": {
+    "brand": "鳄霸",
     "tagline": "新一代 GPU & DSA 语言，实现 5 倍生产力",
     "subtitle": "更少的代码，更多的安全检查，更快地交付 GPU 内核。",
     "cta": "开始使用",
@@ -25,7 +26,7 @@
       "point1": "直接操作张量，而非原始缓冲区",
       "point2": "避免硬件编程的复杂性 — TMA、DMA、tensor-core",
       "point3": "让并行程序更容易编写和理解",
-      "point4": "与 cutlass、CUTE 或任何 C++ 库无缝集成"
+      "point4": "无缝集成 C++ 和 Python — 使用 CroqPy 或链接任何 C++ 库"
     },
     "safety": {
       "title": "编译时安全检查",
@@ -67,7 +68,7 @@
     "resources": "资源",
     "community": "社区",
     "company": "公司",
-    "copyright": "© {year} Croktile. 保留所有权利。",
+    "copyright": "© {year} CroqTile. 保留所有权利。",
     "tutorials": "教程",
     "docs": "文档",
     "changelog": "更新日志",

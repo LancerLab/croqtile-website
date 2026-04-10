@@ -6,7 +6,7 @@ order: 7
 
 ## 概述
 
-虽然 Croktile 主要面向 SPMD（单程序多数据）编程，它也通过线程掩码支持 MPMD（多程序多数据）执行。本节展示如何在 Croktile 中使用 `inthreads` 块编写发散代码。
+虽然 CroqTile 主要面向 SPMD（单程序多数据）编程，它也通过线程掩码支持 MPMD（多程序多数据）执行。本节展示如何在 CroqTile 中使用 `inthreads` 块编写发散代码。
 
 ## 掩码并行线程
 
@@ -25,13 +25,13 @@ order: 7
 
 在 SPMD 中需要*发散*代码才能应对不同实际需求；从另一种范式看，在 SPMD 程序中使用*发散*代码甚至可以在概念上模拟 MPMD（多程序多数据）行为——在 MPMD 中不同线程执行不同代码。因此，*发散*可在概念上把 SPMD 扩展到 MPMD 范围。
 
-在 Croktile 中，可通过 `inthreads` 块创建发散代码。下面展开说明。
+在 CroqTile 中，可通过 `inthreads` 块创建发散代码。下面展开说明。
 
 ## `inthreads`：用线程掩码写发散代码
 
 ### Tileflow 程序的并行视角
 
-在 Croktile 中，*发散*代码区由关键字 `inthreads` 生成，其后跟一个比较表达式。
+在 CroqTile 中，*发散*代码区由关键字 `inthreads` 生成，其后跟一个比较表达式。
 
 请看下例：
 
@@ -56,7 +56,7 @@ __co__  void foo() {
 }
 ```
 
-你现在可以从并行角度重新审视 Croktile 的 tileflow 程序，它由以下部分组成：
+你现在可以从并行角度重新审视 CroqTile 的 tileflow 程序，它由以下部分组成：
 
 - *顺序代码*
 - 包在 `parallel-by` 块中的 *SPMD 风格并行代码*，其中包含：
@@ -65,12 +65,12 @@ __co__  void foo() {
 
 本例中，`p <= 2` 启动*发散代码块*；从实现上看，它生成线程掩码 `000111`，只允许线程 `0`、`1`、`2` 执行内部代码，线程 `3`、`4`、`5` 会跳过该路径。**`inthreads` 块结束后，所有线程被强制同步**。此处意味着线程 `3`、`4`、`5` 在继续前会等待其他线程完成。
 
-在 Croktile 中，`inthreads` 块看起来像 C/C++ 的 `if`。但 `inthreads` 明确表达的是 SPMD 中的代码*发散*，而不是顺序代码的条件分支。因此 `inthreads` 块：
+在 CroqTile 中，`inthreads` 块看起来像 C/C++ 的 `if`。但 `inthreads` 明确表达的是 SPMD 中的代码*发散*，而不是顺序代码的条件分支。因此 `inthreads` 块：
 
 - 只能出现在 SPMD 区域中，即 `parallel-by` 块内。
 - 比较结果只能与线程标识相关。
 
-Croktile 编译器会对比较表达式以及 `inthreads` 块的位置做检查。
+CroqTile 编译器会对比较表达式以及 `inthreads` 块的位置做检查。
 
 ### 异步化
 
@@ -130,7 +130,7 @@ __co__  void foo() {
 
 ## 隐式掩码
 
-在 Croktile 中，多层 `parallel-by` 之间的代码可视为一种隐式掩码。下例说明：
+在 CroqTile 中，多层 `parallel-by` 之间的代码可视为一种隐式掩码。下例说明：
 
 ```
 __co__  void foo() {
@@ -148,6 +148,6 @@ __co__  void foo() {
 
 ## 小结
 
-本节说明了线程掩码的动机：在 Croktile 的 SPMD 范式下实现 MPMD 风格的发散执行。开发者既可用 `inthreads` 做显式线程掩码，也可通过 `parallel-by` 结构隐式限制在特定线程上执行。
+本节说明了线程掩码的动机：在 CroqTile 的 SPMD 范式下实现 MPMD 风格的发散执行。开发者既可用 `inthreads` 做显式线程掩码，也可通过 `parallel-by` 结构隐式限制在特定线程上执行。
 
 线程掩码带来灵活性的同时，也会引入线程异步，使协调更复杂。下一节将探讨管理这些同步挑战的进阶技术。

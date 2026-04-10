@@ -171,9 +171,9 @@ All 12 tasks are complete. Here's a summary of everything that was built:
 - New **square SVG logo** created at `assets/images/logo-square.svg` -- features a reptilian eye (inspired by logo 3's single-eye motif), subtle tile grid background, GPU chip accent, and "CrokTile" wordmark. Designed for GitHub avatar, favicon, slide corner usage.
 
 **3 Custom Marp Themes:**
-- `croktile-dark` -- dark background, green accents, Inter + Noto Sans SC + JetBrains Mono
-- `croktile-light` -- light background, professional
-- `croktile-cn` -- Chinese-optimized with Noto Serif SC headings, wider line-height
+- `croqtile-dark` -- dark background, green accents, Inter + Noto Sans SC + JetBrains Mono
+- `croqtile-light` -- light background, professional
+- `croqtile-cn` -- Chinese-optimized with Noto Serif SC headings, wider line-height
 
 **3 Slide Templates:**
 - `tech-talk.md` -- Problem/Solution/Demo/Benchmarks structure
@@ -187,7 +187,7 @@ All 12 tasks are complete. Here's a summary of everything that was built:
 
 **Build Pipeline (validated):**
 - `scripts/build.py` -- batch builds all decks to PDF/PPTX/HTML
-- Example deck `decks/croktile-intro/` successfully exported to all 3 formats (HTML: 117K, PDF: 78K, PPTX: 3.0M)
+- Example deck `decks/croqtile-intro/` successfully exported to all 3 formats (HTML: 117K, PDF: 78K, PPTX: 3.0M)
 
 ### How to use going forward
 

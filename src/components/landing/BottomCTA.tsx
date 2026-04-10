@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
-import { Link } from "@/i18n/routing";
 import { ScrollReveal } from "./ScrollReveal";
 
 const metrics = [
@@ -23,11 +22,11 @@ export function BottomCTA() {
         <ScrollReveal>
           <img
             src="/logo-mascot.png"
-            alt="Croktile mascot"
+            alt="CroqTile mascot"
             className="mx-auto h-24 w-24 mb-8 rounded-xl object-contain"
           />
           <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
-            Try <span className="text-gradient">Croktile</span> today.
+            Try <span className="text-gradient">CroqTile</span> today.
           </h2>
           <p className="mt-4 text-lg text-[var(--muted-foreground)] max-w-xl mx-auto">
             {t("subtitle")}
@@ -54,16 +53,18 @@ export function BottomCTA() {
 
         <ScrollReveal delay={0.2}>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/docs"
+            <a
+              href="https://codes1gn.github.io/croqtile-tutorial/documentation/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-8 py-3.5 text-sm font-semibold bg-mint-500 text-white rounded-xl
                          hover:bg-mint-600 transition-all shadow-lg shadow-mint-500/25
                          hover:shadow-mint-500/40 hover:scale-[1.02] active:scale-[0.98]"
             >
               {t("cta")}
-            </Link>
+            </a>
             <a
-              href="https://github.com/LancerLab/croktile"
+              href="https://github.com/LancerLab/croqtile"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3.5 text-sm font-semibold border rounded-xl

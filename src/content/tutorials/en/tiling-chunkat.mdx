@@ -5,12 +5,12 @@ order: 11
 ---
 
 ## Overview
-In this section, we will introduce the *chunkat expression* for the DMA statement, which is the core concept of Croktile that simplifies data movement coding.
+In this section, we will introduce the *chunkat expression* for the DMA statement, which is the core concept of CroqTile that simplifies data movement coding.
 
 ## *Ubound* Operation
 In the previous chapter, we learned that a *bounded variable* defined by a `parallel-by` or `with-in` statement is either an *integer* or an *ituple* with one or more bounds. We also learned how to use the *current value* and *upper-bound value* of the *bounded variable* to construct loops in `foreach` blocks, where the *upper-bound* is implicitly used.
 
-However, in Croktile, you can use the **ubound operation** to explicitly retrieve the upper bound of a bounded variable. *Ubound* is a unary operation that uses the prefix symbol `#` before a bounded variable. For example:
+However, in CroqTile, you can use the **ubound operation** to explicitly retrieve the upper bound of a bounded variable. *Ubound* is a unary operation that uses the prefix symbol `#` before a bounded variable. For example:
 
 ```choreo
 with size in [32] {
@@ -32,9 +32,9 @@ __co__ void foo(f32 [36] input) {
 }
 ```
 
-In this example, the built-in member function `.chunkat` is used to create a tile or block for the source expression of the DMA statement. Each tiled block is called a **chunk** in Croktile. The `.chunkat(...)` data expression can be considered a simpler form of `.chunk(...).at(...)`, where the semantics of each part are illustrated in the figure below:
+In this example, the built-in member function `.chunkat` is used to create a tile or block for the source expression of the DMA statement. Each tiled block is called a **chunk** in CroqTile. The `.chunkat(...)` data expression can be considered a simpler form of `.chunk(...).at(...)`, where the semantics of each part are illustrated in the figure below:
 
-![Croktile-Structure-Chunkat](/tutorials/figures/chunkat.png)
+![CroqTile-Structure-Chunkat](/tutorials/figures/chunkat.png)
 
 Considering the expression `input.chunkat(p)`, which is equivalent to `input.chunk(#p).at(p)`:
 
@@ -64,7 +64,7 @@ In this example, there are two bounded variables: `p` is the *bounded integer* d
 
 In addition, since `p` is the bounded variable for parallelization, there are `6` threads working in parallel, each handling a large chunk of `[6, 14, 8]`. Within a single parallel thread, it iterates `7x4` times, each time moving a `[6, 2, 2]` small chunk to a compiler-allocated `shared` memory.
 
-With this approach, we can apply tiling to data movement, where each iteration in each parallel thread selects only a part of the data/buffer for transfer. The Croktile compiler uses information about the *spanned* data and the *bounded variables* to transpile the DMA statement into C++ subscripting, DMA configurations, etc., simplifying the trivial and error-prone work that C++ programmers typically face. This makes learning the Croktile syntax worthwhile.
+With this approach, we can apply tiling to data movement, where each iteration in each parallel thread selects only a part of the data/buffer for transfer. The CroqTile compiler uses information about the *spanned* data and the *bounded variables* to transpile the DMA statement into C++ subscripting, DMA configurations, etc., simplifying the trivial and error-prone work that C++ programmers typically face. This makes learning the CroqTile syntax worthwhile.
 
 ## Tile and Flow
 It is possible to use the `chunkat` expression for either the source or the destination of a *DMA statement*. When `chunkat` is used only for the source, it typically divides the input or buffer into smaller chunks to move it to storage closer to the processor. In contrast, when `chunkat` is used only for the destination, it typically moves the buffer to compose part of the output. The following code showcases an example:
@@ -80,11 +80,11 @@ __co__ auto foo(f32 [36] input) {
 }
 ```
 
-In this example, the statement applies `chunkat` to the destination, moving the data block in `shared` and "un-tiling" each block to the output. Note that the Croktile compiler **requires the source data and destination data to have the same shape and element type** if not using *storage* as the destination *data expression*.
+In this example, the statement applies `chunkat` to the destination, moving the data block in `shared` and "un-tiling" each block to the output. Note that the CroqTile compiler **requires the source data and destination data to have the same shape and element type** if not using *storage* as the destination *data expression*.
 
 However, using the `chunkat` expression for both the source and destination is rarely supported by any target platform at this time.
 
 ## Quick Summary
-In this section, we learned about using the `chunkat` expression in Croktile for tiling data in DMA statements, which allows dividing data into smaller chunks for efficient processing. We explored how `chunkat` can be applied to either the source or destination of a DMA statement to manage data movement between memory and processors.
+In this section, we learned about using the `chunkat` expression in CroqTile for tiling data in DMA statements, which allows dividing data into smaller chunks for efficient processing. We explored how `chunkat` can be applied to either the source or destination of a DMA statement to manage data movement between memory and processors.
 
 Now, you may try to write a full tileflow program. Wish you good luck!

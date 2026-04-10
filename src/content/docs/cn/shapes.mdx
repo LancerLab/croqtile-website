@@ -6,7 +6,7 @@ order: 2
 
 ## 形状声明
 
-在 Croktile 中，数据类型直接携带形状信息：
+在 CroqTile 中，数据类型直接携带形状信息：
 
 ```cpp
 f32 [8, 4, 12] shaped_data;
@@ -16,7 +16,7 @@ f32 [8, 4, 12] shaped_data;
 
 ## 形状操作
 
-Croktile 通过 `span` 提供强大的形状操作：
+CroqTile 通过 `span` 提供强大的形状操作：
 
 ```cpp
 new_shape : shaped_data.span { (0)/2, (1)/4, 1, (2) };

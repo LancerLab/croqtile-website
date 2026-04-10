@@ -6,7 +6,7 @@ order: 9
 
 ## 概述
 
-本节介绍 Croktile 中的*匿名维度（anonymous dimension）*与*符号维度（symbolic dimension）*，以及它们如何支撑某些系统所需的动态形状。
+本节介绍 CroqTile 中的*匿名维度（anonymous dimension）*与*符号维度（symbolic dimension）*，以及它们如何支撑某些系统所需的动态形状。
 
 ## 固定形状与动态形状
 
@@ -14,7 +14,7 @@ order: 9
 
 ## 带**匿名维度**的 *mdspan*
 
-Croktile 支持取值未知的形状维度，与许多高层机器学习语言类似。最简单的方法是在 `mdspan` 中使用**匿名维度**：
+CroqTile 支持取值未知的形状维度，与许多高层机器学习语言类似。最简单的方法是在 `mdspan` 中使用**匿名维度**：
 
 ```cpp
 __co__ auto foo(s32 [?, 1, 2] input) { ... }
@@ -24,7 +24,7 @@ __co__ auto foo(s32 [?, 1, 2] input) { ... }
 
 ```cpp
 void bar(int * data, int dim0) {
-  foo(croktile::make_spanview<3>(data, {dim0, 1, 2}));
+  foo(croqtile::make_spanview<3>(data, {dim0, 1, 2}));
 }
 ```
 
@@ -34,7 +34,7 @@ void bar(int * data, int dim0) {
 
 ## 更进一步：**符号维度**
 
-Croktile 支持动态形状的另一种做法是使用**符号维度**。*符号维度*有名字，但同样在编译期未知。例如：
+CroqTile 支持动态形状的另一种做法是使用**符号维度**。*符号维度*有名字，但同样在编译期未知。例如：
 
 ```cpp
 __co__ auto Matmul(s32 [M, K] lhs, s32 [K, N] rhs) {
@@ -51,7 +51,7 @@ __co__ auto Matmul(s32 [M, K] lhs, s32 [K, N] rhs) {
 
 ## 更强的代码安全性
 
-使用*符号维度*能提高安全性的原因在于，Croktile 编译器可施加更全面的检查。例如，考虑 `Matmul` 函数的*匿名维度*版本：
+使用*符号维度*能提高安全性的原因在于，CroqTile 编译器可施加更全面的检查。例如，考虑 `Matmul` 函数的*匿名维度*版本：
 
 ```cpp
 __co__ auto Matmul(s32 [?, ?] lhs, s32 [?, ?] rhs) {
@@ -64,15 +64,15 @@ __co__ auto Matmul(s32 [?, ?] lhs, s32 [?, ?] rhs) {
 }
 ```
 
-Croktile 在编译期与运行期都会做检查以保证安全：
+CroqTile 在编译期与运行期都会做检查以保证安全：
 
-- **编译期检查**：Croktile 校验秩（rank）一致性。本例中 `lhs.span` 的秩为 `2`，与 `{tile_m, tile_k}` 的秩一致，因此无问题。
-- **运行期检查**：Croktile 生成代码在运行期校验维度。例如在 `tiled_lhs` 的声明中，其形状不能出现为 `0` 的维度，否则会产生无效的零大小缓冲区。Croktile 的*转译（transpilation）*过程会生成如下*目标宿主代码*：
+- **编译期检查**：CroqTile 校验秩（rank）一致性。本例中 `lhs.span` 的秩为 `2`，与 `{tile_m, tile_k}` 的秩一致，因此无问题。
+- **运行期检查**：CroqTile 生成代码在运行期校验维度。例如在 `tiled_lhs` 的声明中，其形状不能出现为 `0` 的维度，否则会产生无效的零大小缓冲区。CroqTile 的*转译（transpilation）*过程会生成如下*目标宿主代码*：
 
 ```cpp
-void __croktile_transpiled_Matmul(croktile::span_view<2, croktile::s32> lhs,
-                                croktile::span_view<2, croktile::s32> rhs) {
-  croktile_assert(lhs.shape()[0] / 32 > 0,
+void __croqtile_transpiled_Matmul(croqtile::span_view<2, croqtile::s32> lhs,
+                                croqtile::span_view<2, croqtile::s32> rhs) {
+  croqtile_assert(lhs.shape()[0] / 32 > 0,
                 "the 0 dimension of 'lhs' may result in spanned data "
                 "with a dimension value of 0.");
   // ...
@@ -81,16 +81,16 @@ void __croktile_transpiled_Matmul(croktile::span_view<2, croktile::s32> lhs,
 
 此处若断言条件不满足，程序会中止；这种尽早检查有助于及时发现问题。
 
-对于*符号维度*版本，Croktile 编译器会在*目标宿主代码*中生成额外检查：
+对于*符号维度*版本，CroqTile 编译器会在*目标宿主代码*中生成额外检查：
 
 ```cpp
-void __croktile_transpiled_Matmul(croktile::span_view<2, croktile::s32> lhs,
-                                croktile::span_view<2, croktile::s32> rhs) {
+void __croqtile_transpiled_Matmul(croqtile::span_view<2, croqtile::s32> lhs,
+                                croqtile::span_view<2, croqtile::s32> rhs) {
   // additional check happens only when using symbolic dimensions
-  croktile_assert(lhs.shape()[1] == rhs.shape()[0],
+  croqtile_assert(lhs.shape()[1] == rhs.shape()[0],
                 "dimension 'K' is not consistent.");
 
-  croktile_assert(lhs.shape()[0] / 32 > 0,
+  croqtile_assert(lhs.shape()[0] / 32 > 0,
                 "the 0 dimension of 'lhs' may result in spanned data "
                 "with a dimension value of 0.");
   // ...
@@ -103,9 +103,9 @@ void __croktile_transpiled_Matmul(croktile::span_view<2, croktile::s32> lhs,
 
 ## 代价与限制
 
-为支持动态形状，Croktile 编译器在编译期必须保守，这会限制部分编译期检查，并使某些检查改在运行期进行。尽管实现尽量把开销放在宿主侧，但与固定形状代码相比，这些检查**仍然更保守**。程序员应留意这一点，必要时可补充用户级断言以增强安全。
+为支持动态形状，CroqTile 编译器在编译期必须保守，这会限制部分编译期检查，并使某些检查改在运行期进行。尽管实现尽量把开销放在宿主侧，但与固定形状代码相比，这些检查**仍然更保守**。程序员应留意这一点，必要时可补充用户级断言以增强安全。
 
-*匿名维度*与*符号维度*的一个重要限制是：它们**只能用于参数列表中的*跨度数据***。在 Croktile 函数内部声明的缓冲区维度不能做成动态。例如下面代码会产生编译期错误：
+*匿名维度*与*符号维度*的一个重要限制是：它们**只能用于参数列表中的*跨度数据***。在 CroqTile 函数内部声明的缓冲区维度不能做成动态。例如下面代码会产生编译期错误：
 
 ```cpp
 __co__ void foo() { f32 [M] d;} // compile-time error: can not applied to the spanned buffer
@@ -113,4 +113,4 @@ __co__ void foo() { f32 [M] d;} // compile-time error: can not applied to the sp
 
 ## 小结
 
-本节讨论了 Croktile 中的*匿名维度*与*符号维度*，它们支撑某些场景所需的动态形状。与*匿名维度*相比，*符号维度*通过额外的编译期检查增强安全性，在易用性与安全性上更值得推荐。
+本节讨论了 CroqTile 中的*匿名维度*与*符号维度*，它们支撑某些场景所需的动态形状。与*匿名维度*相比，*符号维度*通过额外的编译期检查增强安全性，在易用性与安全性上更值得推荐。

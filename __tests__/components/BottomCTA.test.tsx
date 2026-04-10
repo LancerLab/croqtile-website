@@ -29,9 +29,9 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("BottomCTA", () => {
-  it("renders the Try Croktile heading", () => {
+  it("renders the Try CroqTile heading", () => {
     renderWithProviders(<BottomCTA />);
-    expect(screen.getByText("Croktile")).toBeInTheDocument();
+    expect(screen.getByText("CroqTile")).toBeInTheDocument();
   });
 
   it("renders CTA button", () => {
@@ -42,7 +42,7 @@ describe("BottomCTA", () => {
   it("renders GitHub link", () => {
     renderWithProviders(<BottomCTA />);
     const ghLink = screen.getByText("View on GitHub");
-    expect(ghLink.closest("a")).toHaveAttribute("href", "https://github.com/LancerLab/croktile");
+    expect(ghLink.closest("a")).toHaveAttribute("href", "https://github.com/LancerLab/croqtile");
     expect(ghLink.closest("a")).toHaveAttribute("target", "_blank");
   });
 });

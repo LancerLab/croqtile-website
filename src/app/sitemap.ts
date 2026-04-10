@@ -5,9 +5,9 @@ import { locales } from "@/i18n/config";
 export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://croktile.io";
+  const baseUrl = "https://croqtile.io";
 
-  const staticRoutes = ["", "/docs", "/tutorials", "/blog", "/changelog"];
+  const staticRoutes = ["", "/docs", "/tutorials", "/changelog"];
 
   const entries: MetadataRoute.Sitemap = [];
 

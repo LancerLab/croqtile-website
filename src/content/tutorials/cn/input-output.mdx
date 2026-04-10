@@ -1,16 +1,16 @@
 ---
 title: "输入与输出"
-description: "Croktile 函数参数、返回类型以及主机端形状数据的 API。"
+description: "CroqTile 函数参数、返回类型以及主机端形状数据的 API。"
 order: 12
 ---
 
 ## 概述
 
-本章说明 Croktile 函数如何声明输入与输出、C++ 主机如何传递带形状的缓冲区，以及返回值在主机侧如何表示。
+本章说明 CroqTile 函数如何声明输入与输出、C++ 主机如何传递带形状的缓冲区，以及返回值在主机侧如何表示。
 
-## Croktile 函数输入
+## CroqTile 函数输入
 ### 输入参数
-Croktile 函数仅接受两类输入参数：*spanned data* 与 *integer*。
+CroqTile 函数仅接受两类输入参数：*spanned data* 与 *integer*。
 
 与普通 C++ 程序一样，参数可以命名也可以不命名：
 
@@ -18,13 +18,13 @@ Croktile 函数仅接受两类输入参数：*spanned data* 与 *integer*。
 __co__ void foo(f32 [7] a, int) {...}
 ```
 
-本例中第二个参数未命名，因此在 Croktile 函数内无法引用。但这仍是合法代码。
+本例中第二个参数未命名，因此在 CroqTile 函数内无法引用。但这仍是合法代码。
 
 
 ### C++ 主机：带形状的数据实参
-C/C++ 指针/数组与 Croktile *spanned data* 之间一个明显差异是：*spanned data* 带有形状。因此调用 Croktile 函数时，需要将指针或数组转换为带形状的形式。
+C/C++ 指针/数组与 CroqTile *spanned data* 之间一个明显差异是：*spanned data* 带有形状。因此调用 CroqTile 函数时，需要将指针或数组转换为带形状的形式。
 
-一种直接方法是使用 `croktile.h` 中提供的 Croktile API。虽然在 Croktile 编译环境中不必显式包含 `croktile.h`，但每个 Croktile-C++ 程序都会包含它。
+一种直接方法是使用 `croqtile.h` 中提供的 CroqTile API。虽然在 CroqTile 编译环境中不必显式包含 `croqtile.h`，但每个 CroqTile-C++ 程序都会包含它。
 
 ```choreo
 __co__ void foo(f32 [7, 16] input, f32 [7, 16] output) {...}
@@ -37,7 +37,7 @@ void entry(float * input, float* output) {
 }
 ```
 
-上例使用 `croktile::make_spanned` 函数模板，以秩为模板参数，以类型化指针与形状列表为函数实参。这样指针附带形状，即可作为合法的 Croktile 函数参数。从 `croktile.h` 可知，其结果是 `croktile::spanned_view` 对象，仅包装 C/C++ 指针/数组与基于数组的维度列表。为便于理解，简化定义类似：
+上例使用 `croqtile::make_spanned` 函数模板，以秩为模板参数，以类型化指针与形状列表为函数实参。这样指针附带形状，即可作为合法的 CroqTile 函数参数。从 `croqtile.h` 可知，其结果是 `croqtile::spanned_view` 对象，仅包装 C/C++ 指针/数组与基于数组的维度列表。为便于理解，简化定义类似：
 
 ```cpp
 template <typename T, size_t Rank>
@@ -56,15 +56,15 @@ void entry(float * input, float* output, int M, int N) {
   foo(choreo::make_spanned<2>(input, {M, N})),
 }
 ```
-本例中 `input` 的形状在运行时由变量决定。若参数错误不必担心：进入 tileflow 程序时 Croktile 会检查 `M == 7` 且 `N == 16`。**若不成立，程序将立即终止**，因为 Croktile 函数中的形状假设不成立。
+本例中 `input` 的形状在运行时由变量决定。若参数错误不必担心：进入 tileflow 程序时 CroqTile 会检查 `M == 7` 且 `N == 16`。**若不成立，程序将立即终止**，因为 CroqTile 函数中的形状假设不成立。
 
-关于 *spanned data* 输入的重要一点是：它们**指向输入数据/缓冲区的引用**。这意味着调用 Croktile 函数时不会发生数据拷贝，尽管从语言角度看可能像拷贝语义。
+关于 *spanned data* 输入的重要一点是：它们**指向输入数据/缓冲区的引用**。这意味着调用 CroqTile 函数时不会发生数据拷贝，尽管从语言角度看可能像拷贝语义。
 
-## Croktile 函数输出
+## CroqTile 函数输出
 ### 返回类型与类型推导
 与输入类似，*spanned data* 与 *integer* 均可作为输出类型；若不返回值，也允许 *void*。
 
-除显式标注返回类型外，Croktile 支持对返回值进行类型推断。例如：
+除显式标注返回类型外，CroqTile 支持对返回值进行类型推断。例如：
 
 ```choreo
 __co__ auto foo() {
@@ -73,11 +73,11 @@ __co__ auto foo() {
   return result;
 }
 ```
-此处返回类型标注为 `auto`，与 C++ 关键字相同。Croktile 可推断返回类型为 `f32 [7, 16]`。因此尽可能使用 `auto` 是推荐做法。
+此处返回类型标注为 `auto`，与 C++ 关键字相同。CroqTile 可推断返回类型为 `f32 [7, 16]`。因此尽可能使用 `auto` 是推荐做法。
 
 ### C++ 主机：形状与返回
 
-接收 Croktile 函数输出的 C++ 主机代码实际收到的是缓冲区。语义上，返回必须是拷贝而非引用，否则会返回被调函数内分配对象的引用。例如：
+接收 CroqTile 函数输出的 C++ 主机代码实际收到的是缓冲区。语义上，返回必须是拷贝而非引用，否则会返回被调函数内分配对象的引用。例如：
 
 ```choreo
 __co__ auto foo() {
@@ -92,7 +92,7 @@ void entry() {
 }
 ```
 
-本例中 `output` 在语义上拷贝给调用方。但在 Croktile 的实现中并不发生拷贝。返回类型为 `croktile::spanned_data`，其简化定义如下：
+本例中 `output` 在语义上拷贝给调用方。但在 CroqTile 的实现中并不发生拷贝。返回类型为 `croqtile::spanned_data`，其简化定义如下：
 
 ```cpp
 template <typename T, size_t Rank>
@@ -102,16 +102,16 @@ class spanned_data {
 };
 ```
 
-与 `croktile::spanned_view` 相反，`croktile::spanned_data` 拥有所指向的缓冲区，因此**从 Croktile 函数返回时实际上没有拷贝**。用编译器术语说，这称为*返回值优化（Return Value Optimization）*。
+与 `croqtile::spanned_view` 相反，`croqtile::spanned_data` 拥有所指向的缓冲区，因此**从 CroqTile 函数返回时实际上没有拷贝**。用编译器术语说，这称为*返回值优化（Return Value Optimization）*。
 
-可使用 `.rank()`、`.shape()` 等成员函数查询 Croktile 返回值的形状相关信息，从而在不必过深了解 Croktile 函数细节的情况下进行集成。
+可使用 `.rank()`、`.shape()` 等成员函数查询 CroqTile 返回值的形状相关信息，从而在不必过深了解 CroqTile 函数细节的情况下进行集成。
 
 ## 更多问题
-与 C++ 函数一样，Croktile 函数可在源码中任意定义。一个常见问题是**函数签名**，因为程序员可能希望将模块与 Croktile 函数定义链接。
+与 C++ 函数一样，CroqTile 函数可在源码中任意定义。一个常见问题是**函数签名**，因为程序员可能希望将模块与 CroqTile 函数定义链接。
 
-答案是：Croktile 函数遵循 C++ 调用约定，即带 C++ 名称修饰的标准 C++ 函数。注意 **`extern "C"`** 不能用于 Croktile 函数，因为其参数类型为基于 C++ 模板的对象（spanned data）。
+答案是：CroqTile 函数遵循 C++ 调用约定，即带 C++ 名称修饰的标准 C++ 函数。注意 **`extern "C"`** 不能用于 CroqTile 函数，因为其参数类型为基于 C++ 模板的对象（spanned data）。
 
 以下特性尚待支持：
 
-- 仅有声明、无定义的 Croktile 函数。这将允许从其他模块调用 Croktile 函数。
-- 带 `inline` 的 Croktile 函数。这将允许在头文件中使用 Croktile 函数。
+- 仅有声明、无定义的 CroqTile 函数。这将允许从其他模块调用 CroqTile 函数。
+- 带 `inline` 的 CroqTile 函数。这将允许在头文件中使用 CroqTile 函数。

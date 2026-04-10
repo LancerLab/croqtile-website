@@ -7,7 +7,6 @@ import {
   FeatureAI,
   BottomCTA,
   HomeChangelog,
-  HomeBlog,
 } from "@/components/landing";
 
 type Props = {
@@ -23,15 +22,6 @@ export default async function HomePage({ params }: Props) {
     slug: e.meta.slug,
   }));
 
-  const blogPosts = getAllContent("blog", locale).map((p) => ({
-    title: p.meta.title,
-    description: p.meta.description,
-    date: p.meta.date,
-    author: p.meta.author,
-    slug: p.meta.slug,
-    tags: p.meta.tags,
-  }));
-
   return (
     <>
       <Hero />
@@ -42,7 +32,6 @@ export default async function HomePage({ params }: Props) {
         <FeatureAI />
       </div>
       <HomeChangelog entries={changelogEntries} />
-      <HomeBlog posts={blogPosts} />
       <BottomCTA />
     </>
   );

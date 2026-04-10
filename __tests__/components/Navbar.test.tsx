@@ -37,7 +37,6 @@ describe("Navbar", () => {
     expect(screen.getByText("Tutorials")).toBeInTheDocument();
     expect(screen.getByText("Docs")).toBeInTheDocument();
     expect(screen.getByText("Changelog")).toBeInTheDocument();
-    expect(screen.getByText("Blog")).toBeInTheDocument();
   });
 
   it("renders the GitHub button", () => {
@@ -47,7 +46,7 @@ describe("Navbar", () => {
 
   it("renders the logo", () => {
     renderWithProviders(<Navbar />);
-    const logo = screen.getByAltText("Croktile");
+    const logo = screen.getByAltText("CroqTile");
     expect(logo).toBeInTheDocument();
   });
 

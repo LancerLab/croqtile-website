@@ -4,11 +4,11 @@ description: "Overlap computation with DMA using dma.any, swap, and rotate."
 order: 7
 ---
 
-# Multi-Buffering Optimization with Croktile
+# Multi-Buffering Optimization with CroqTile
 
 To aggressively optimize the high-performance computation kernels, one effective method is to overlap computation with DMA (Direct Memory Access) data movement. This approach, known as **multi-buffering optimization**, typically requires programmers to manage multiple buffers.
 
-In Croktile, this method requires two key programming primitives: the 'dummy' future **dma.any**, and the **swap/rotate** function. Let's illustrate by an example:
+In CroqTile, this method requires two key programming primitives: the 'dummy' future **dma.any**, and the **swap/rotate** function. Let's illustrate by an example:
 
 ```cpp
 __co__ s32 [6, 17, 128] ele_add(s32 [6, 17, 128] lhs,
@@ -43,7 +43,7 @@ __co__ s32 [6, 17, 128] ele_add(s32 [6, 17, 128] lhs,
 }
 ```
 
-In croktile function `ele_add`, there are two input parameters: 'lhs' and 'rhs', both double-buffered in local storage. We refer to these buffers as 'A' and 'B'. While buffer A is used for computation, buffer B is filled with data via a DMA operation. Once the kernel function completes computation on buffer A, the roles of A and B are swapped: A becomes the buffer for loading the next data chunk, and B becomes the buffer for computation. This process iterates until all data chunks are consumed.
+In croqtile function `ele_add`, there are two input parameters: 'lhs' and 'rhs', both double-buffered in local storage. We refer to these buffers as 'A' and 'B'. While buffer A is used for computation, buffer B is filled with data via a DMA operation. Once the kernel function completes computation on buffer A, the roles of A and B are swapped: A becomes the buffer for loading the next data chunk, and B becomes the buffer for computation. This process iterates until all data chunks are consumed.
 
 The implementation divides data movements and computations into three stages, including:
 

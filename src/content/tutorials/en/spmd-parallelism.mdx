@@ -5,11 +5,11 @@ order: 8
 ---
 
 ## Overview
-To fully utilize parallel hardware, it is crucial to write parallel code in Croktile. This section will guide you through using the `parallel-by` block to implement parallel code in Croktile.
+To fully utilize parallel hardware, it is crucial to write parallel code in CroqTile. This section will guide you through using the `parallel-by` block to implement parallel code in CroqTile.
 
 
 ## Parallel Execution Block
-In Croktile, the code run in parallel are placed into the *parallel execution block*, which showcasing there are multiple instances of the same code that are executed simultaneously.
+In CroqTile, the code run in parallel are placed into the *parallel execution block*, which showcasing there are multiple instances of the same code that are executed simultaneously.
 
 ### Basic Syntax: `parallel-by`
 
@@ -37,7 +37,7 @@ This invokes two parallel threads to execute. However, it is not possible for th
 
 ### Multiple-Level Parallelism
 
-In Croktile, you can define multiple levels of parallelism. Here's an example:
+In CroqTile, you can define multiple levels of parallelism. Here's an example:
 
 ```choreo
 parallel p by 2 {
@@ -48,11 +48,11 @@ parallel p by 2 {
 }
 ```
 
-This code defines two levels of parallelism with values `2` and `12`, respectively. This means a total of `2 x 12 = 24` parallel threads are invoked for the task. Each thread is identified by a unique combination of `p` and `q`. In Croktile, we refer to the level of `p` as *parallel-level-0* and the level of `q` as *parallel-level-1*. For those familiar with CUDA, *parallel-level-0* corresponds to the CUDA **grid** level, and *parallel-level-1* corresponds to the CUDA **block** level.
+This code defines two levels of parallelism with values `2` and `12`, respectively. This means a total of `2 x 12 = 24` parallel threads are invoked for the task. Each thread is identified by a unique combination of `p` and `q`. In CroqTile, we refer to the level of `p` as *parallel-level-0* and the level of `q` as *parallel-level-1*. For those familiar with CUDA, *parallel-level-0* corresponds to the CUDA **grid** level, and *parallel-level-1* corresponds to the CUDA **block** level.
 
 The concept of multiple-level parallelism originates from hardware architecture with hierarchical memory. One key difference observable by programmers is the **synchronization cost**. For instance, in CUDA, threads within a **block** have a much lower synchronization cost compared to those across different **grids**. This hierarchical design encourages programmers to place the most divergent code (that requires synchronization) within the **block** level to enhance overall performance.
 
-In Croktile syntax, you can define multiple-level parallelism in a single line:
+In CroqTile syntax, you can define multiple-level parallelism in a single line:
 
 ```choreo
 parallel p by 2, q by 12 { ... }
@@ -62,7 +62,7 @@ This achieves the same parallelization as the previous example. It uses the **co
 
 ### Sub-Level Parallelism
 
-Targets like *CUDA* allow a single parallelism level to be divided into up to three sub-levels. In Croktile, `ituple` and `mdspan` are used for this syntax:
+Targets like *CUDA* allow a single parallelism level to be divided into up to three sub-levels. In CroqTile, `ituple` and `mdspan` are used for this syntax:
 
 ```choreo
 parallel {px, py, pz} by [1, 1, 2] {
@@ -78,7 +78,7 @@ parallel {px, py, pz} by [1, 1, 2] {
 
 In this example, two levels of parallelism are defined. The first level (*level-0*) is subdivided into three sub-levels, annotated by the `{px, py, pz}` `ituple`. The second level (*level-1*) is subdivided into two sub-levels, annotated by the `{qx, qy}` `ituple`, or `t_index` as a whole. For each sub-level, the parallelization count corresponds to the respective value inside the `mdspan`.
 
-The concept of sub-levels originates from *CUDA*'s GPU workload management, which often involves data with 2D or 3D elements. Note that the first element inside the `ituple` represents the **least significant parallel variable**. Croktile adopts this ordering to align with *CUDA* developers' conventions, rather than for internal consistency.
+The concept of sub-levels originates from *CUDA*'s GPU workload management, which often involves data with 2D or 3D elements. Note that the first element inside the `ituple` represents the **least significant parallel variable**. CroqTile adopts this ordering to align with *CUDA* developers' conventions, rather than for internal consistency.
 
 ### Bounded Variable
 
@@ -95,7 +95,7 @@ The concept of bounded variables will be explored further in later sections, whe
 
 ### Heterogeneity: Transpiling to Kernel Launch
 
-For targets like *CUDA/Cute*, the `parallel-by` block not only specifies the number of parallel threads but also defines the boundary between host and device code, leveraging Croktile's ability to manage heterogeneity. Specifically:
+For targets like *CUDA/Cute*, the `parallel-by` block not only specifies the number of parallel threads but also defines the boundary between host and device code, leveraging CroqTile's ability to manage heterogeneity. Specifically:
 
 - Code **outside** the `parallel-by` block is transpiled into **host code**.
 - Code **inside** the block is transpiled into **device code**, as illustrated below:
@@ -113,11 +113,11 @@ __co__ void foo(...) {
 }
 ```
 
-For those familiar with *CUDA*, this is analogous to a **Kernel Launch** occurring at the `parallel-by` statement. However, Croktile abstracts these details with the unified SPMD parallelism model, allowing developers to focus on their algorithms without worrying about the underlying heterogeneity.
+For those familiar with *CUDA*, this is analogous to a **Kernel Launch** occurring at the `parallel-by` statement. However, CroqTile abstracts these details with the unified SPMD parallelism model, allowing developers to focus on their algorithms without worrying about the underlying heterogeneity.
 
 ### Restrictions on Storage Specifiers
 
-Since the `parallel-by` construct in Croktile is related to hardware, including heterogeneity and memory hierarchy, it is subject to the constraints of the target platform.
+Since the `parallel-by` construct in CroqTile is related to hardware, including heterogeneity and memory hierarchy, it is subject to the constraints of the target platform.
 
 For example, for *CUDA/Cute* targets, a *spanned* buffer must be annotated with the appropriate storage specifier within the *parallel execution block*. This is because the target platform allows only *scratchpad memory*, such as *shared* and *local* memory, to be allocated by device code. Conversely, code outside the *parallel execution block* can only declare *global* or default host memory, which the target platform allows the host code to manage.
 
@@ -125,6 +125,6 @@ Additionally, *shared* and *local* memory types have a lifetime limited to the d
 
 ### Quick Summary
 
-In this section, we explored Croktile's approach to parallelism in heterogeneous computing environments, focusing on the `parallel-by` block syntax and the management of multiple and sub-level parallelism. We also discussed how Croktile abstracts kernel launches and imposes memory management constraints, enabling us to leverage parallel hardware effectively.
+In this section, we explored CroqTile's approach to parallelism in heterogeneous computing environments, focusing on the `parallel-by` block syntax and the management of multiple and sub-level parallelism. We also discussed how CroqTile abstracts kernel launches and imposes memory management constraints, enabling us to leverage parallel hardware effectively.
 
-However, while parallelism enhances efficiency, loops remain essential. In the next section, we will introduce how to build loops in Croktile.
+However, while parallelism enhances efficiency, loops remain essential. In the next section, we will introduce how to build loops in CroqTile.

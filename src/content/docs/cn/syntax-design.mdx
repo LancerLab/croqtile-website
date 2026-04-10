@@ -1,40 +1,40 @@
 ---
 title: "语法设计"
-description: "Croktile 的类型、控制流、DMA 与调用约定。"
+description: "CroqTile 的类型、控制流、DMA 与调用约定。"
 order: 8
 ---
 
-# Croktile 语法设计
+# CroqTile 语法设计
 
 ## 简介
 
-Croktile 是一种嵌入式领域专用语言（eDSL），用于简化加速器硬件上的数据搬运与编排，旨在减轻编写高性能内核工程师的日常负担，包括受硬件能力约束的分块（tiling）等数据搬运复杂性。借助 Croktile，编程过程更易上手，工程师能更高效地优化这些关键环节。
+CroqTile 是一种嵌入式领域专用语言（eDSL），用于简化加速器硬件上的数据搬运与编排，旨在减轻编写高性能内核工程师的日常负担，包括受硬件能力约束的分块（tiling）等数据搬运复杂性。借助 CroqTile，编程过程更易上手，工程师能更高效地优化这些关键环节。
 
 ## 嵌入 C++
 
-Croktile 是以 C++ 为宿主的 DSL 代码。Croktile 编译器将 Croktile 函数做源码到源码的翻译，生成 C++ 代码；会隐式包含 `"croktile.h"`，使翻译结果能与其他 C++ 代码正确衔接。下面代码片段为一例。
+CroqTile 是以 C++ 为宿主的 DSL 代码。CroqTile 编译器将 CroqTile 函数做源码到源码的翻译，生成 C++ 代码；会隐式包含 `"croqtile.h"`，使翻译结果能与其他 C++ 代码正确衔接。下面代码片段为一例。
 
 ```
 // some C++ code
 
-__co__ void croktile_function() {
-  // croktile code
+__co__ void croqtile_function() {
+  // croqtile code
 }
 
 // another C++ code
 void foo() {
-  croktile_function();
+  croqtile_function();
 }
 
 ```
 
-注意，Croktile 函数以 `__co__` 关键字为前缀，函数体内的代码均由 Croktile 编译器翻译；其余 C++ 代码按声明名直接调用 Croktile 函数。
+注意，CroqTile 函数以 `__co__` 关键字为前缀，函数体内的代码均由 CroqTile 编译器翻译；其余 C++ 代码按声明名直接调用 CroqTile 函数。
 
-此外，为保证 Croktile 函数实参与其调用方一致，引入了若干 Croktile 专有类型。因尚有重要编程要素未介绍，相关细节在数据类型说明之后再展开。
+此外，为保证 CroqTile 函数实参与其调用方一致，引入了若干 CroqTile 专有类型。因尚有重要编程要素未介绍，相关细节在数据类型说明之后再展开。
 
 ## 变量与类型
 
-Croktile 引入四类基本类型：标量类型（scalar-type）、跨度类型（spanned-type）、整数元组类型（integer-tuple-type / ituple-type）与有界类型（bounded-type），用途各不相同。
+CroqTile 引入四类基本类型：标量类型（scalar-type）、跨度类型（spanned-type）、整数元组类型（integer-tuple-type / ituple-type）与有界类型（bounded-type），用途各不相同。
 
 - **标量类型**：满足程序控制需求，包含*整数类型*与*布尔类型*。
 - **跨度类型**：表示计算所用的数据类型（通常为张量）。除引用原始数据外，*跨度类型*还将数据与由多维范围表示的形状关联；该「多维范围」称为 `mdspan`，对分块等很有用，后文会介绍。
@@ -45,7 +45,7 @@ Croktile 引入四类基本类型：标量类型（scalar-type）、跨度类型
 
 ### 标量类型
 
-如前所述，Croktile 的标量类型包含*整数类型*与*布尔类型*。*整数类型*类似 C++ 的 `int` 或 `int32_t`，为 32 位有符号，取值范围 $-2^{31}$ 到 $2^{31}-1$。下面代码展示其在数据与函数声明中的用法。
+如前所述，CroqTile 的标量类型包含*整数类型*与*布尔类型*。*整数类型*类似 C++ 的 `int` 或 `int32_t`，为 32 位有符号，取值范围 $-2^{31}$ 到 $2^{31}-1$。下面代码展示其在数据与函数声明中的用法。
 
 ```
 int a;
@@ -54,13 +54,13 @@ __co__ int foo(int b);
 
 整数算术、移位与逻辑运算均支持，语法与 C++ 内建运算一致。
 
-Croktile 不提供无符号标量整数，也不提供 8/16/64 位标量整数的对等物；设计动机是：程序控制未必需要这些类型，通常 32 位有符号整数已足够。
+CroqTile 不提供无符号标量整数，也不提供 8/16/64 位标量整数的对等物；设计动机是：程序控制未必需要这些类型，通常 32 位有符号整数已足够。
 
-Croktile 的*布尔类型*类似 C++ 的 `bool`；布尔上的运算及与整数之间的转换，与 C++ 一致。
+CroqTile 的*布尔类型*类似 C++ 的 `bool`；布尔上的运算及与整数之间的转换，与 C++ 一致。
 
 ### 跨度类型
 
-跨度类型是**复合类型**，由**基础类型（fundamental type）**与**多维跨度（multi-dimensional-span，mdspan）类型**组成。*基础类型*与 *mdspan* 单独都不是*完整类型*，即不能单独作为带存储的数据类型。在 Croktile 中，二者称为*部分类型（partial types）*。
+跨度类型是**复合类型**，由**基础类型（fundamental type）**与**多维跨度（multi-dimensional-span，mdspan）类型**组成。*基础类型*与 *mdspan* 单独都不是*完整类型*，即不能单独作为带存储的数据类型。在 CroqTile 中，二者称为*部分类型（partial types）*。
 
 将类型拆成两部分是为了能单独操作 *mdspan*，这在 ML 等场景中至关重要：数据多为多维，程序员常把数据切成更小块并在存储层次间搬运，因此操纵多维数据的*形状*（由 *mdspan* 表示）十分关键。
 
@@ -68,11 +68,11 @@ Croktile 的*布尔类型*类似 C++ 的 `bool`；布尔上的运算及与整数
 
 #### 部分类型：**mdspan**
 
-与多数类型系统不同，*mdspan* 作为类型实体出现时仍是*部分*的：Croktile 程序不能把数据定义为单独的 *mdspan* 类型，但可以单独定义 *mdspan* 本身。这样设计是因为循环分块/阻塞往往只关心多维数据的形状，与基础类型无关；因此允许在不关心关联基础类型的情况下操作 *mdspan*，简化与形状相关的编程。
+与多数类型系统不同，*mdspan* 作为类型实体出现时仍是*部分*的：CroqTile 程序不能把数据定义为单独的 *mdspan* 类型，但可以单独定义 *mdspan* 本身。这样设计是因为循环分块/阻塞往往只关心多维数据的形状，与基础类型无关；因此允许在不关心关联基础类型的情况下操作 *mdspan*，简化与形状相关的编程。
 
-同时，Croktile 编译器可对 *mdspan* 做类型检查，以便尽早发现错误。
+同时，CroqTile 编译器可对 *mdspan* 做类型检查，以便尽早发现错误。
 
-在 Croktile 中，*mdspan* 由 `[` 与 `]` 括起，维度的上界用 `,` 分隔，例如：
+在 CroqTile 中，*mdspan* 由 `[` 与 `]` 括起，维度的上界用 `,` 分隔，例如：
 
 ```
 mdspan sp : [7, 8];           // defined a mdspan of 2-dimensions
@@ -100,22 +100,22 @@ sp : [6, 8];
 spn : [1, sp(0)/2, sp(1)/4]; // define a new mdspan from the existing one.
 ```
 
-该机制便于在 Croktile 中对多维跨度做分块。由于高性能内核构造中分块几乎总是需要，Croktile 还提供了更简洁的语法糖：
+该机制便于在 CroqTile 中对多维跨度做分块。由于高性能内核构造中分块几乎总是需要，CroqTile 还提供了更简洁的语法糖：
 
 ```
 sp : [6, 8];
 spn : sp [1, (0)/2, (1)/4];  // spn is defined as [1, 3, 2]
 ```
 
-语义与上一段等价，写法更简单，符合 Croktile「在可行前提下用最少代码完成功能」的设计哲学。
+语义与上一段等价，写法更简单，符合 CroqTile「在可行前提下用最少代码完成功能」的设计哲学。
 
 **注意：*mdspan* 只能被定义，不能修改已有 *mdspan*；且每个 *mdspan* 只能定义一次。**
 
-除上述按*逐维*方式定义外，Croktile 还支持其他定义方式；在介绍 *i-tuple* 时会再说明。
+除上述按*逐维*方式定义外，CroqTile 还支持其他定义方式；在介绍 *i-tuple* 时会再说明。
 
 #### 完整类型标注
 
-单独使用 *mdspan* 不能定义用于计算的数据。在 Croktile 函数中，数据定义必须是**完整类型**，由基础类型与 *mdspan* 共同组成。例如：
+单独使用 *mdspan* 不能定义用于计算的数据。在 CroqTile 函数中，数据定义必须是**完整类型**，由基础类型与 *mdspan* 共同组成。例如：
 
 ```
 ndims : [20, 15];
@@ -123,19 +123,19 @@ f32 [10, 10] d0;
 f16 [ndims] d1;
 ```
 
-Croktile 支持的基础类型包括：
+CroqTile 支持的基础类型包括：
 
 - 无符号整数：*u8/u16/u32*
 - 有符号整数：*s8/s16/s32*
 - 浮点：*f16/bf16/f32*
 
-注意在 Croktile 中 `s32` 与 `int` 不同：`s32` 是基础类型，不能用于完整类型（fully typing）标注。
+注意在 CroqTile 中 `s32` 与 `int` 不同：`s32` 是基础类型，不能用于完整类型（fully typing）标注。
 
 #### 存储限定符
 
-Croktile 中带跨度类型的数据通常较大。对这类数据，程序员可在加速器不同内存层级间搬运，以更好利用硬件。
+CroqTile 中带跨度类型的数据通常较大。对这类数据，程序员可在加速器不同内存层级间搬运，以更好利用硬件。
 
-Croktile 定义三种存储限定符，用于标注所定义数据的存放位置：
+CroqTile 定义三种存储限定符，用于标注所定义数据的存放位置：
 
 - **global**，
 - **shared**，
@@ -164,7 +164,7 @@ index = {a, b};  // 'a' and 'b' are existing integers
 
 ### 对 *mdspan* 与 *i-tuple* 的运算
 
-Croktile 允许对 *i-tuple* 与 *mdspan* 做特殊运算。下例是对 *mdspan* 做固定分块：
+CroqTile 允许对 *i-tuple* 与 *mdspan* 做特殊运算。下例是对 *mdspan* 做固定分块：
 
 ```
 sp : [6, 8];
@@ -173,7 +173,7 @@ spn : sp / tiling_factor;   // spn is defined as [2, 4];
 
 ```
 
-Croktile 中可用此类**元组-跨度运算（Tuple-Span Operations）**定义 *mdspan*，支持的运算包括：
+CroqTile 中可用此类**元组-跨度运算（Tuple-Span Operations）**定义 *mdspan*，支持的运算包括：
 
 - *mdspan* $/$ *i-tuple*
 - *mdspan* $+$ *i-tuple*
@@ -181,21 +181,21 @@ Croktile 中可用此类**元组-跨度运算（Tuple-Span Operations）**定义
 - *mdspan* $*$ *i-tuple*
 - *mdspan* $-$ *i-tuple*
 
-这些运算本质上也可通过逐维定义 *mdspan* 实现，但*元组-跨度运算*有助于写出更可读的代码，这也是 Croktile 的目标之一。
+这些运算本质上也可通过逐维定义 *mdspan* 实现，但*元组-跨度运算*有助于写出更可读的代码，这也是 CroqTile 的目标之一。
 
 ### 有界类型
 
 有界类型包括**有界标量（Bounded Scalar）**与**有界 ITuple（Bounded ITuple）**。有界标量取值范围为 $[0, \mathrm{ub})$，其中 `ub` 为上界。若整数 `p` 为有界，则须关联具体上界；该关联须在 `parallel-by` 与 `with-in` 等*控制结构*中显式写出，后文介绍。
 
-类似地，*ITuple* 作为一组 *Integer*，也可关联一组上界。在 Croktile 中，*Bounded ITuple* 与 *mdspan* 值关联，从而确定一组上界。后续章节将给出详细语法。
+类似地，*ITuple* 作为一组 *Integer*，也可关联一组上界。在 CroqTile 中，*Bounded ITuple* 与 *mdspan* 值关联，从而确定一组上界。后续章节将给出详细语法。
 
 ## 控制结构
 
-Croktile 在并行化、循环等方面与 C++ 有显著差异。
+CroqTile 在并行化、循环等方面与 C++ 有显著差异。
 
 ### 并行区域：`parallel-by` 块
 
-在 CPU 等系统上，可通过异步线程实现并行。Croktile 则采用单指令多数据（SPMD）模型实现并行，类似部分 OpenMP 并行指令以及 OpenCL/CUDA 等语言。
+在 CPU 等系统上，可通过异步线程实现并行。CroqTile 则采用单指令多数据（SPMD）模型实现并行，类似部分 OpenMP 并行指令以及 OpenCL/CUDA 等语言。
 
 但构造并行区域的语法不同：采用 C 风格花括号，将并行执行的代码放在 `parallel-by` 块中。
 
@@ -247,7 +247,7 @@ with {m, n} in [M, N], {n_p, k} in [N_P, K] where n_p <-> n {
 
 ### `foreach` 块
 
-当 `with-in` 定义了 *bounded-ituple* 后，可对有界 ituple/有界整数做循环。在 Croktile 中写法很直接：
+当 `with-in` 定义了 *bounded-ituple* 后，可对有界 ituple/有界整数做循环。在 CroqTile 中写法很直接：
 
 ```
 with x in [10] {
@@ -261,7 +261,7 @@ with x in [10] {
 
 ### 异步运算：DMA 语句
 
-除并行执行外，Croktile 允许一种固定形式的异步运算：DMA 语句。
+除并行执行外，CroqTile 允许一种固定形式的异步运算：DMA 语句。
 
 概念上，DMA 语句与 SPMD 代码**异步**执行，行为类似 CPU 异步线程，但受 DMA 配置约束（CPU 上对异步线程的编程更自由）。
 
@@ -275,9 +275,9 @@ f = dma.copy.async g_data => l_data;
 wait f;         // explicit wait
 ```
 
-这里利用数据传输引擎（DTE）发起线性拷贝，将位于全局内存的数据搬到局部内存。注意对 `f` 的赋值：它是异步 DMA 实体的句柄，在 Croktile 中称为 DMA 操作的 `future`。程序员可写显式同步语句 `wait`，使当前线程在 `future` 完成前阻塞；否则线程与 DMA 并行继续执行。
+这里利用数据传输引擎（DTE）发起线性拷贝，将位于全局内存的数据搬到局部内存。注意对 `f` 的赋值：它是异步 DMA 实体的句柄，在 CroqTile 中称为 DMA 操作的 `future`。程序员可写显式同步语句 `wait`，使当前线程在 `future` 完成前阻塞；否则线程与 DMA 并行继续执行。
 
-有时显式定义临时数据较繁琐，Croktile 提供更简语法：
+有时显式定义临时数据较繁琐，CroqTile 提供更简语法：
 
 ```
 global f32 [10] data;
@@ -287,11 +287,11 @@ f = dma.copy data => local;
 
 此处不必指定 DMA 的确切目标地址，只需指明目标内存类型；这在许多场景下很有利，程序员常希望少操心便笺式存储（SPM）管理。此例中局部内存分配交给编译器；要取得搬运后的数据，只需调用 `future` 的 `data` 成员。此外，该 dma 未标 `.async`，因此不需要也不能对 `f` 执行 `wait`。
 
-DMA 涉及大量细节，需谨慎编程；应参考 DMA 手册做决策。尽管如此，Croktile 编译器仍提供大量静态与运行期检查，帮助避免常见错误。
+DMA 涉及大量细节，需谨慎编程；应参考 DMA 手册做决策。尽管如此，CroqTile 编译器仍提供大量静态与运行期检查，帮助避免常见错误。
 
 ### 有界 ituple/整数与 `chunkat` 运算
 
-`chunkat` 作用于带跨度的数据，在已有数据上产生新的 *mdspan*；某些系统中类似「子视图（subview）」。因 `chunkat` 接受有界 ituple 与有界整数作为参数，在 Croktile 中命名不同。
+`chunkat` 作用于带跨度的数据，在已有数据上产生新的 *mdspan*；某些系统中类似「子视图（subview）」。因 `chunkat` 接受有界 ituple 与有界整数作为参数，在 CroqTile 中命名不同。
 
 ```
 global f32 [6, 10, 100] data;
@@ -308,9 +308,9 @@ parallel p by 6 {
 
 上例展示 `chunkat` 的典型用法：跨度类型为 `f32 [6, 10, 100]`，`chunkat` 接收整数 `p` 与 ituple `index` 两个参数，假定将数据划分为 $6 \times 10 \times 10$ 块，对应 `p` 与 `index` 相关范围；每次取一块搬到局部存储，沿最低维连续 10 个元素。
 
-## 函数调用与调用 Croktile 函数
+## 函数调用与调用 CroqTile 函数
 
-Croktile 函数**不能**调用另一个 Croktile 函数；但在 Croktile 函数内调用 C++ 内核函数是常见用法。
+CroqTile 函数**不能**调用另一个 CroqTile 函数；但在 CroqTile 函数内调用 C++ 内核函数是常见用法。
 
 ```
 void bar() {...}    // C++ kernel function
@@ -322,14 +322,14 @@ __co__ void foo() {
 
 ```
 
-上例用 Croktile 关键字 `call` 调用已有 C++ 函数 `bar`，语义直观。
+上例用 CroqTile 关键字 `call` 调用已有 C++ 函数 `bar`，语义直观。
 
-## Croktile 与 C++ 之间的参数传递
+## CroqTile 与 C++ 之间的参数传递
 
-向 Croktile 传递参数或反向传递时，需包含头文件 `croktile.h`。通常将原始 C++ 指针与维度信息组合，构造 Croktile 的跨度数据。下例说明用法：
+向 CroqTile 传递参数或反向传递时，需包含头文件 `croqtile.h`。通常将原始 C++ 指针与维度信息组合，构造 CroqTile 的跨度数据。下例说明用法：
 
 ```
-#include "croktile.h"
+#include "croqtile.h"
 
 void bar(const float* data, unsigned size) {}
 
@@ -340,16 +340,16 @@ __co__ void foo(f32 mdspan<2> d) {
 }
 
 void foobar(float* a) {
-  foo(croktile::make_spanview<2>(a, {1, 2}));
+  foo(croqtile::make_spanview<2>(a, {1, 2}));
 }
 ```
 
-示例使用 Croktile 工具函数（模板）`make_spanview` 包装数据，不产生拷贝。Croktile 函数 `foo` 的参数 `f32 mdspan<2>` 与之对应；数据可隐式转换，故可将 `d` 直接作为 C++ 函数 `bar` 的第一个参数；运算符 `|d|` 得到跨度数据 `d` 的总元素个数。二者用于调用 C++ 的 `bar`。
+示例使用 CroqTile 工具函数（模板）`make_spanview` 包装数据，不产生拷贝。CroqTile 函数 `foo` 的参数 `f32 mdspan<2>` 与之对应；数据可隐式转换，故可将 `d` 直接作为 C++ 函数 `bar` 的第一个参数；运算符 `|d|` 得到跨度数据 `d` 的总元素个数。二者用于调用 C++ 的 `bar`。
 
-同样，*标量类型*数据也可在 Croktile 与 C++ 之间传递；但 *ituple* 仅在 Croktile 函数内部使用。
+同样，*标量类型*数据也可在 CroqTile 与 C++ 之间传递；但 *ituple* 仅在 CroqTile 函数内部使用。
 
 ## 小结
 
-Croktile 为 SPMD 编程提供了一种新思路：偏好 C++ 风格写法，并嵌入在 C++ 中；其核心是减轻底层细节负担，尤其是通过 DMA 在各内存层之间搬运数据。有时也被称为数据流式 DSL。我们开发该工具以支撑日常高性能内核构建工作，希望程序员少纠结语言构造细节，多关注更高层的概念。
+CroqTile 为 SPMD 编程提供了一种新思路：偏好 C++ 风格写法，并嵌入在 C++ 中；其核心是减轻底层细节负担，尤其是通过 DMA 在各内存层之间搬运数据。有时也被称为数据流式 DSL。我们开发该工具以支撑日常高性能内核构建工作，希望程序员少纠结语言构造细节，多关注更高层的概念。
 
 若你发现它符合预期，欢迎反馈以便持续改进。

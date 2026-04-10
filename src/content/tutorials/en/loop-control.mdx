@@ -8,11 +8,11 @@ order: 9
 
 In this section, you will learn about constructing *bounded variable*s using the `with-in` statement and creating loops with the `foreach` statement.
 
-## Loops in Croktile
+## Loops in CroqTile
 
 In C++, loops are typically constructed using `for`, `while`, and `do-while` blocks. These loops include conditions for termination and usually involve variable manipulations related to loop control. Programmers have the freedom to define exit conditions, loop stepping, and other aspects, allowing for flexible loop structures.
 
-In contrast, Croktile, being a domain-specific language for data movement, supports a more constrained loop structure. The current loop construction in Croktile is as follows:
+In contrast, CroqTile, being a domain-specific language for data movement, supports a more constrained loop structure. The current loop construction in CroqTile is as follows:
 
 ```choreo
 foreach index {
@@ -30,7 +30,7 @@ for (int index = 0; index < 6; ++index) {
 
 While *bounded variables* may seem restrictive, they are sufficient for data movement tasks, as you typically won't move data with a negative or out-of-bound index.
 
-In Croktile, *bounded variables* defined within a `parallel-by` statement are immutable and cannot be used in `foreach` statements. Instead, programmers should use the `with-in` statement to define the *bounded variables* suitable for loops.
+In CroqTile, *bounded variables* defined within a `parallel-by` statement are immutable and cannot be used in `foreach` statements. Instead, programmers should use the `with-in` statement to define the *bounded variables* suitable for loops.
 
 ## The **With-In** Block
 
@@ -144,7 +144,7 @@ with {y, z} in [8, 16] {
 
 ### Deriving the Loop From a Bounded Integer
 
-In certain scenarios, such as pipelining data movement, it may be necessary to modify loop iterations. In Croktile, this can be achieved by deriving a loop from a *bounded integer* within the `foreach` statement. For example:
+In certain scenarios, such as pipelining data movement, it may be necessary to modify loop iterations. In CroqTile, this can be achieved by deriving a loop from a *bounded integer* within the `foreach` statement. For example:
 
 ```choreo
 with {x, y} in [6, 17] {
@@ -167,7 +167,7 @@ As seen in the code, the `y`-loop starts at `1`. The *range expression* consists
 
 This derives a loop from the `bounded-variable`, where the `bounded-variable` serves as the *iteration variable* of the loop. Specifically:
 
-- The initial value of the *iteration variable* is the `lower-offset` plus the lower bound of the `bounded-variable`. Since all bounded integers have a lower bound of `0` in Croktile, the `lower-offset` sets the initial value of the loop.
+- The initial value of the *iteration variable* is the `lower-offset` plus the lower bound of the `bounded-variable`. Since all bounded integers have a lower bound of `0` in CroqTile, the `lower-offset` sets the initial value of the loop.
 - The loop terminates when the *iteration variable* is equal to or greater than the upper bound of the `bounded-variable` plus `upper-offset`. Negative values are typically used for `upper-offset`.
 - The *iteration variable* increments by `stride` at the end of each iteration.
 
@@ -198,6 +198,6 @@ with x in 6 {
 ```
 
 ## Quick Summary
-In this section, we explain the use of `with-in` and `foreach` statements in Croktile to define and iterate over *bounded variable*s, which are essential for data movement tasks. We introduced the syntax and behavior of these constructs, including how to apply range operations to modify loop iterations and the importance of understanding the current and upper-bound values of bounded variables.
+In this section, we explain the use of `with-in` and `foreach` statements in CroqTile to define and iterate over *bounded variable*s, which are essential for data movement tasks. We introduced the syntax and behavior of these constructs, including how to apply range operations to modify loop iterations and the importance of understanding the current and upper-bound values of bounded variables.
 
 The loop deriving part is important for implementing multi-buffering data movement, which is essential for building high-performance kernels and will be introduced in optimization chapters later.

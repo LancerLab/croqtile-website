@@ -32,7 +32,7 @@ export default async function TutorialsPage({ params }: Props) {
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold mb-4">Tutorials</h1>
             <p className="text-[var(--muted-foreground)]">
-              Learn Croktile step by step with hands-on tutorials.
+              Learn CroqTile step by step with hands-on tutorials.
             </p>
             {sidebarItems.length > 0 && (
               <DocGrid items={sidebarItems} basePath="/tutorials" />

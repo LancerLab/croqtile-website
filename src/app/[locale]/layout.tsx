@@ -25,14 +25,14 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Croktile — The Next-Gen GPU & DSA Language. 5x Productivity.",
-    template: "%s | Croktile",
+    default: "CroqTile — The Next-Gen GPU & DSA Language. 5x Productivity.",
+    template: "%s | CroqTile",
   },
   description:
-    "Croktile is the next-gen GPU & DSA programming language that achieves 5x productivity over CUDA with zero-cost abstractions.",
-  metadataBase: new URL("https://croktile.io"),
+    "CroqTile is the next-gen GPU & DSA programming language that achieves 5x productivity over CUDA with zero-cost abstractions.",
+  metadataBase: new URL("https://croqtile.io"),
   keywords: [
-    "croktile",
+    "croqtile",
     "tileflow",
     "GPU programming",
     "DSA programming",
@@ -46,27 +46,27 @@ export const metadata: Metadata = {
     "machine learning",
     "kernel programming",
   ],
-  authors: [{ name: "Croktile Team" }],
+  authors: [{ name: "CroqTile Team" }],
   openGraph: {
     type: "website",
-    siteName: "Croktile",
-    title: "Croktile — The Next-Gen GPU & DSA Language. 5x Productivity.",
+    siteName: "CroqTile",
+    title: "CroqTile — The Next-Gen GPU & DSA Language. 5x Productivity.",
     description:
       "The next-gen GPU & DSA language. 5x productivity over CUDA with zero-cost abstractions.",
-    url: "https://croktile.io",
+    url: "https://croqtile.io",
     locale: "en_US",
     images: [
       {
         url: "/og-image.svg",
         width: 1200,
         height: 630,
-        alt: "Croktile — The Next-Gen GPU & DSA Language. 5x Productivity.",
+        alt: "CroqTile — The Next-Gen GPU & DSA Language. 5x Productivity.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Croktile — The Next-Gen GPU & DSA Language. 5x Productivity.",
+    title: "CroqTile — The Next-Gen GPU & DSA Language. 5x Productivity.",
     description:
       "The next-gen GPU & DSA language. 5x productivity over CUDA with zero-cost abstractions.",
     images: ["/og-image.svg"],

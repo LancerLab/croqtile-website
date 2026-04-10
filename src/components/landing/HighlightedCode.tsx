@@ -174,7 +174,7 @@ function tokenizeLine(line: string, lang: string): Array<{ text: string; type: T
           type = "storage";
         } else if (isChoreo && CHOREO_BUILTINS.has(word)) {
           type = "function";
-        } else if (isPython && /^(tl|hl|torch|triton|helion|cutlass|cute)$/.test(word)) {
+        } else if (isPython && /^(tl|hl|torch|triton|helion|cutlass|cute|croq|croqtile)$/.test(word)) {
           type = "function";
         } else if (!isChoreo && !isPython && C_KEYWORDS.has(word)) {
           type = "keyword";
@@ -196,7 +196,7 @@ function tokenizeLine(line: string, lang: string): Array<{ text: string; type: T
       if (methodMatch && isPython) {
         tokens.push({ text: ".", type: "punctuation" });
         const mName = methodMatch[0];
-        const mType: TokenType = /^(constexpr|program_id|num_programs|load|store|zeros|arange|dot|float16|float32|float8e4nv|to|cdiv|range|jit|autotune|Config|shape|stride|dtype|T|device|empty|matmul|synchronize|assert_close|get_device_properties)$/.test(mName) ? "function" : "default";
+        const mType: TokenType = /^(constexpr|program_id|num_programs|load|store|zeros|arange|dot|float16|float32|float8e4nv|to|cdiv|range|jit|autotune|Config|shape|stride|dtype|T|device|empty|matmul|synchronize|assert_close|get_device_properties|co|mma|tma|dma|parallel|foreach|with_in|declare|fill|exec|copy|subspan|chunkat|at|dump_ast|add|Program)$/.test(mName) ? "function" : "default";
         tokens.push({ text: mName, type: mType });
         pos += 1 + mName.length;
         continue;

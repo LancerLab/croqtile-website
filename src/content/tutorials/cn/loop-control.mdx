@@ -8,11 +8,11 @@ order: 9
 
 本节将介绍如何用 `with-in` 语句构造*有界变量*，以及如何用 `foreach` 语句创建循环。
 
-## Croktile 中的循环
+## CroqTile 中的循环
 
 在 C++ 中，循环通常用 `for`、`while` 与 `do-while` 构造。这些循环包含终止条件，并常涉及与循环控制相关的变量操作。程序员可以自由定义退出条件、步进方式等，因而循环结构非常灵活。
 
-相比之下，作为面向数据移动的领域特定语言，Croktile 支持更受约束的循环结构。当前 Croktile 中的循环构造如下：
+相比之下，作为面向数据移动的领域特定语言，CroqTile 支持更受约束的循环结构。当前 CroqTile 中的循环构造如下：
 
 ```choreo
 foreach index {
@@ -30,7 +30,7 @@ for (int index = 0; index < 6; ++index) {
 
 *有界变量*看似受限，但对数据移动任务已足够，因为通常不会用负下标或越界下标来搬运数据。
 
-在 Croktile 中，`parallel-by` 语句内定义的*有界变量*是不可变的，不能用于 `foreach` 语句。程序员应改用 `with-in` 语句定义适用于循环的*有界变量*。
+在 CroqTile 中，`parallel-by` 语句内定义的*有界变量*是不可变的，不能用于 `foreach` 语句。程序员应改用 `with-in` 语句定义适用于循环的*有界变量*。
 
 ## **With-In** 块
 
@@ -144,7 +144,7 @@ with {y, z} in [8, 16] {
 
 ### 从有界整数派生循环
 
-某些场景（例如流水线化数据移动）需要调整循环迭代。在 Croktile 中，可在 `foreach` 中从*有界整数*派生循环。例如：
+某些场景（例如流水线化数据移动）需要调整循环迭代。在 CroqTile 中，可在 `foreach` 中从*有界整数*派生循环。例如：
 
 ```choreo
 with {x, y} in [6, 17] {
@@ -167,7 +167,7 @@ for (int x = 0; x < 6; ++x)
 
 由此从 `bounded-variable` 派生循环，该 `bounded-variable` 作为循环的*迭代变量*。具体而言：
 
-- *迭代变量*的初值为 `lower-offset` 加上 `bounded-variable` 的下界。Croktile 中有界整数下界均为 `0`，故 `lower-offset` 决定循环初值。
+- *迭代变量*的初值为 `lower-offset` 加上 `bounded-variable` 的下界。CroqTile 中有界整数下界均为 `0`，故 `lower-offset` 决定循环初值。
 - 当*迭代变量*大于或等于 `bounded-variable` 的上界加上 `upper-offset` 时循环结束。`upper-offset` 通常为负值。
 - 每次迭代结束时，*迭代变量*按 `stride` 递增。
 
@@ -198,6 +198,6 @@ with x in 6 {
 ```
 
 ## 小结
-本节说明了如何在 Croktile 中使用 `with-in` 与 `foreach` 定义并迭代*有界变量*——这对数据移动任务至关重要。我们介绍了这些构造的语法与行为，包括如何应用范围操作以修改循环迭代，以及理解有界变量当前值与上界值的重要性。
+本节说明了如何在 CroqTile 中使用 `with-in` 与 `foreach` 定义并迭代*有界变量*——这对数据移动任务至关重要。我们介绍了这些构造的语法与行为，包括如何应用范围操作以修改循环迭代，以及理解有界变量当前值与上界值的重要性。
 
 从有界变量派生循环对实现多缓冲数据移动尤为重要，而多缓冲是构建高性能内核的关键，将在后续优化章节中介绍。

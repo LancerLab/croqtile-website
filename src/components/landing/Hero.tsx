@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "@/i18n/routing";
 import { useState, useCallback } from "react";
 import { HighlightedCode } from "./HighlightedCode";
 
@@ -10,30 +9,17 @@ const codeExamples = [
   {
     label: "Sparse GEMM (FP8 E4M3)",
     file: "gemm_sp_e4m3.co",
-    code: `__co__ void spmm(
-    global f8_e4m3 [M, PACKED_K] lhs_packed,
-    global u8 [M, META_COLS] lhs_meta,
-    global f8_e4m3 [N, K] rhs,
-    global f16 [M, N] output) {
-  parallel {block_m, block_n}
-      by [cdiv(M, SPMM_WARP_M),
-          cdiv(N, SPMM_WARP_N)] : block {
+    code: `__co__ void spmm(global f8_e4m3 [M, PACKED_K] lhs_packed, global u8 [M, META_COLS] lhs_meta, global f8_e4m3 [N, K] rhs, global f16 [M, N] output) {
+  parallel {block_m, block_n} by [cdiv(M, SPMM_WARP_M), cdiv(N, SPMM_WARP_N)] : block {
     shared event full[STAGES], empty[STAGES];
-    shared f8_e4m3 [STAGES * SPMM_WARP_M,
-                    SPMM_PACKED_TILE_K] lhs_s;
-    shared f8_e4m3 [STAGES * SPMM_WARP_N,
-                    SPMM_TILE_K] rhs_s;
-
+    shared f8_e4m3 [STAGES * SPMM_WARP_M, SPMM_PACKED_TILE_K] lhs_s;
+    shared f8_e4m3 [STAGES * SPMM_WARP_N, SPMM_TILE_K] rhs_s;
     parallel p1 by 2 : group-4 {
       inthreads.async (p1 == 0) {
         foreach {iv_k} in [cdiv(K, SPMM_TILE_K)] {
           stage = iv_k % STAGES;
           wait empty[stage];
-          tma.copy.async<full[stage]>.swiz<32>
-            lhs_packed.subspan(SPMM_WARP_M,
-              SPMM_PACKED_TILE_K).at(block_m, iv_k)
-            => lhs_s.subspan(SPMM_WARP_M,
-              SPMM_PACKED_TILE_K).at(stage, 0);
+          tma.copy.async<full[stage]>.swiz<32> lhs_packed.subspan(SPMM_WARP_M, SPMM_PACKED_TILE_K).at(block_m, iv_k) => lhs_s.subspan(SPMM_WARP_M, SPMM_PACKED_TILE_K).at(stage, 0);
           trigger full[stage];
         }
       }
@@ -41,18 +27,14 @@ const codeExamples = [
         mc = mma.fill.f16 0.0f;
         foreach {iv_k} in [cdiv(K, SPMM_TILE_K)] {
           wait full[iv_k % STAGES];
-          ma = mma.load.swiz<32>
-            lhs_s.at(iv_k % STAGES, 0);
-          mb = mma.load.swiz<64>
-            rhs_s.at(iv_k % STAGES, 0);
+          ma = mma.load.swiz<32> lhs_s.at(iv_k % STAGES, 0);
+          mb = mma.load.swiz<64> rhs_s.at(iv_k % STAGES, 0);
           me = mma.load lhs_meta_s;
           mma.row.row.sp mc, ma, mb, me;
           trigger empty[iv_k % STAGES];
         }
         mma.store mc, output_s;
-        tma.copy output_s
-          => output.subspan(SPMM_WARP_M,
-             SPMM_WARP_N).at(block_m, block_n);
+        tma.copy output_s => output.subspan(SPMM_WARP_M, SPMM_WARP_N).at(block_m, block_n);
       }
     }
   }
@@ -61,46 +43,25 @@ const codeExamples = [
   {
     label: "Fused MoE (FP8→BF16)",
     file: "moe_gemm.co",
-    code: `__co__ void moe_gemm_kernel_bf16(
-    global f8_e4m3 [M, K] lhs,
-    global f32 [M, DIV_BLK_K] scale_a,
-    global f8_e4m3 [EXPERT_N, K] rhs,
-    global f32 [EXPERT_DIV_BLK_N, DIV_BLK_K] scale_b,
-    global s32 [EXPERTS1] expert_offsets,
-    global bf16 [M, N] output, stream s) {
-
-  parallel.async {eid, block_n}
-    by [EXPERTS, cdiv(N, WARP_N)] : block
+    code: `__co__ void moe_gemm_kernel_bf16(global f8_e4m3 [M, K] lhs, global f32 [M, DIV_BLK_K] scale_a, global f8_e4m3 [EXPERT_N, K] rhs, global f32 [EXPERT_DIV_BLK_N, DIV_BLK_K] scale_b, global s32 [EXPERTS1] expert_offsets, global bf16 [M, N] output, stream s) {
+  parallel.async {eid, block_n} by [EXPERTS, cdiv(N, WARP_N)] : block
   parallel by 1 : group-4
   parallel t by 128 : thread {
     shared f8_e4m3 [WARP_M, TILE_K] sA;
     shared f8_e4m3 [WARP_N, TILE_K] sB;
-
     s32 seg_start = expert_offsets.at(eid);
     s32 seg_end   = expert_offsets.at(eid + 1);
-
-    foreach {iv_m} in [cdiv(seg_end-seg_start,
-                            WARP_M)] {
+    foreach {iv_m} in [cdiv(seg_end-seg_start, WARP_M)] {
       mc = mma.fill.f32 0.0f;
       foreach {iv_k} in [cdiv(K, TILE_K)] {
-        dma.copy.swiz<128>.zfill
-          lhs.view(WARP_M, TILE_K)
-            .from(seg_start + iv_m*WARP_M,
-                  iv_k*TILE_K) => sA;
-        tma.copy.swiz<128>
-          rhs.subspan(WARP_N, TILE_K)
-            .at(eid # block_n, iv_k) => sB;
+        dma.copy.swiz<128>.zfill lhs.view(WARP_M, TILE_K).from(seg_start + iv_m*WARP_M, iv_k*TILE_K) => sA;
+        tma.copy.swiz<128> rhs.subspan(WARP_N, TILE_K).at(eid # block_n, iv_k) => sB;
         ma = mma.load.swiz<128> sA;
         mb = mma.load.swiz<128> sB;
         mma.row.row mc, ma, mb;
-        mma.scale mc,
-          scale_a.view(WARP_M, 1)
-            .from(seg_start+iv_m*WARP_M, iv_k),
-          scale_b.at(eid # block_n, iv_k);
+        mma.scale mc, scale_a.view(WARP_M, 1).from(seg_start+iv_m*WARP_M, iv_k), scale_b.at(eid # block_n, iv_k);
       }
-      mma.store mc, output.view(TILE_M, WARP_N)
-        .from(seg_start+iv_m*WARP_M,
-              block_n*WARP_N);
+      mma.store mc, output.view(TILE_M, WARP_N).from(seg_start+iv_m*WARP_M, block_n*WARP_N);
     }
   }
 }`,
@@ -108,37 +69,21 @@ const codeExamples = [
   {
     label: "Persistent Hilbert GEMM",
     file: "matmul_hilbert.co",
-    code: `// Persistent kernel with Hilbert curve
-// tile scheduling for L2 cache locality
-__co__ void matmul(
-    global f16 [M, K] lhs,
-    global f16 [N, K] rhs,
-    global f16 [M, N] output,
-    global s32 [T] schedule_m,
-    global s32 [T] schedule_n) {
-
-  int total_tiles = cdiv(M, WARP_M)
-                  * cdiv(N, WARP_N);
-
+    code: `__co__ void matmul(global f16 [M, K] lhs, global f16 [N, K] rhs, global f16 [M, N] output, global s32 [T] schedule_m, global s32 [T] schedule_n) {
+  int total_tiles = cdiv(M, WARP_M) * cdiv(N, WARP_N);
   parallel block_id by NUM_SMS : block {
     shared f16 [WARP_M, TILE_K] lhs_s;
     shared f16 [WARP_N, TILE_K] rhs_s;
     shared f16 [WARP_M, WARP_N] out_s;
-
-    foreach {tile_iter}
-        in [cdiv(total_tiles, NUM_SMS)] {
+    foreach {tile_iter} in [cdiv(total_tiles, NUM_SMS)] {
       tile_id = tile_iter # block_id;
       if (tile_id < total_tiles) {
         int bm = schedule_m.at(tile_id);
         int bn = schedule_n.at(tile_id);
         mc = mma.fill.f16 0.0f;
         foreach {iv_k} in [cdiv(K, TILE_K)] {
-          tma.copy.swiz<128>
-            lhs.subspan(WARP_M, TILE_K)
-              .at(bm, iv_k) => lhs_s;
-          tma.copy.swiz<128>
-            rhs.subspan(WARP_N, TILE_K)
-              .at(bn, iv_k) => rhs_s;
+          tma.copy.swiz<128> lhs.subspan(WARP_M, TILE_K).at(bm, iv_k) => lhs_s;
+          tma.copy.swiz<128> rhs.subspan(WARP_N, TILE_K).at(bn, iv_k) => rhs_s;
           parallel p by 1 : group-4 {
             ma = mma.load.swiz<128> lhs_s;
             mb = mma.load.swiz<128> rhs_s;
@@ -146,13 +91,74 @@ __co__ void matmul(
           }
         }
         mma.store mc, out_s;
-        tma.copy out_s
-          => output.subspan(WARP_M, WARP_N)
-               .at(bm, bn);
+        tma.copy out_s => output.subspan(WARP_M, WARP_N).at(bm, bn);
       }
     }
   }
 }`,
+  },
+  {
+    label: "FP8 Matmul (CroqPy)",
+    file: "matmul_e4m3.py",
+    lang: "python",
+    code: `import croq
+
+M, N, K = 768, 512, 512
+WARP_M, WARP_N, TILE_K, WARP_K = 64, 64, 32, 32
+
+@croq.co
+def matmul(lhs: croq.Global(croq.f8_e4m3[M, K]), rhs: croq.Global(croq.f8_e4m3[N, K]), output: croq.Global(croq.f32[M, N])):
+    for bm, bn in croq.parallel(bm=M // WARP_M, bn=N // WARP_N, scope=croq.BLOCK):
+        lhs_s = croq.declare(croq.f8_e4m3[WARP_M, TILE_K], "lhs_s", storage=croq.SHARED)
+        rhs_s = croq.declare(croq.f8_e4m3[WARP_N, TILE_K], "rhs_s", storage=croq.SHARED)
+        mc = croq.mma.fill(0.0, dtype=croq.f32)
+        for iv_k in croq.foreach(iv_k=K // TILE_K):
+            croq.tma.copy(lhs.subspan(WARP_M, TILE_K).step(WARP_M, TILE_K).at(bm, iv_k), lhs_s, swizzle=32)
+            croq.tma.copy(rhs.chunkat(bn, iv_k), rhs_s, swizzle=32)
+            for iv_w in croq.foreach(iv_w=TILE_K // WARP_K):
+                for p in croq.parallel(p=1, scope="group-4"):
+                    ma = croq.mma.load(lhs_s.chunkat(croq.FULL, iv_w), swizzle=32)
+                    mb = croq.mma.load(rhs_s.chunkat(croq.FULL, iv_w), swizzle=32)
+                    mc = croq.mma.exec(mc, ma, mb, method="row.row")
+        out_s = croq.declare(croq.f32[WARP_M, WARP_N], "out_s", storage=croq.SHARED)
+        croq.mma.store(mc, out_s)
+        croq.tma.copy(out_s, output.subspan(WARP_M, WARP_N).step(WARP_M, WARP_N).at(bm, bn))
+
+prog = croq.Program()
+prog.add(matmul)
+print(prog.dump_ast())`,
+  },
+  {
+    label: "TMA Matmul (CroqPy)",
+    file: "matmul_tma.py",
+    lang: "python",
+    code: `import croq
+
+M, N, K = 128, 128, 64
+WARP_M, WARP_N, TILE_K = 64, 64, 64
+
+@croq.co
+def matmul(lhs: croq.f16[M, K], rhs: croq.f16[N, K]) -> croq.f16[M, N]:
+    output = croq.declare(croq.f16[M, N], "output")
+    for bm, bn in croq.parallel(bm=M // WARP_M, bn=N // WARP_N, scope=croq.BLOCK):
+        lhs_s = croq.declare(croq.f16[WARP_M, TILE_K], "lhs_s", storage=croq.SHARED)
+        rhs_s = croq.declare(croq.f16[WARP_N, TILE_K], "rhs_s", storage=croq.SHARED)
+        mc = croq.mma.fill(0.0, dtype=croq.f32)
+        for iv_k in croq.foreach(iv_k=K // TILE_K):
+            croq.tma.copy(lhs.subspan(WARP_M, TILE_K).at(bm, iv_k), lhs_s, swizzle=128)
+            croq.tma.copy(rhs.subspan(WARP_N, TILE_K).at(bn, iv_k), rhs_s, swizzle=128)
+            for p in croq.parallel(p=1, scope="group-4"):
+                ma = croq.mma.load(lhs_s, swizzle=128)
+                mb = croq.mma.load(rhs_s, swizzle=128)
+                mc = croq.mma.exec(mc, ma, mb, method="row.row")
+        out_s = croq.declare(croq.f16[WARP_M, WARP_N], "out_s", storage=croq.SHARED)
+        croq.mma.store(mc, out_s)
+        croq.tma.copy(out_s, output.subspan(WARP_M, WARP_N).at(bm, bn))
+    return output
+
+prog = croq.Program()
+prog.add(matmul)
+print(prog.dump_ast())`,
   },
 ];
 
@@ -187,9 +193,15 @@ export function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight max-w-5xl leading-[1.08]"
+            className="text-5xl sm:text-6xl lg:text-7xl tracking-tight max-w-5xl leading-[1.08] flex flex-wrap items-baseline justify-center gap-x-2 sm:gap-x-3 gap-y-1"
           >
-            {t("tagline")}
+            <span className="font-black text-mint-500 dark:text-mint-400 text-[1.12em] sm:text-[1.1em] lg:text-[1.08em] shrink-0">
+              {t("brand")}
+            </span>
+            <span className="text-[var(--muted-foreground)] font-extrabold shrink-0">
+              —
+            </span>
+            <span className="font-extrabold text-balance">{t("tagline")}</span>
           </motion.h1>
 
           <motion.p
@@ -207,16 +219,18 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-10 flex flex-col sm:flex-row gap-4"
           >
-            <Link
-              href="/docs"
+            <a
+              href="https://codes1gn.github.io/croqtile-tutorial/documentation/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-8 py-3.5 text-sm font-semibold bg-mint-500 text-white rounded-xl
                          hover:bg-mint-600 transition-all shadow-lg shadow-mint-500/25
                          hover:shadow-mint-500/40 hover:scale-[1.02] active:scale-[0.98]"
             >
               {t("cta")}
-            </Link>
+            </a>
             <a
-              href="https://github.com/LancerLab/croktile"
+              href="https://github.com/LancerLab/croqtile"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-3.5 text-sm font-semibold border rounded-xl
@@ -244,12 +258,12 @@ export function Hero() {
                   <span className="w-3 h-3 rounded-full bg-yellow-400/80" />
                   <span className="w-3 h-3 rounded-full bg-green-400/80" />
                 </div>
-                <div className="flex gap-0 ml-2">
+                <div className="flex gap-0 ml-2 overflow-x-auto">
                   {codeExamples.map((ex, i) => (
                     <button
                       key={ex.label}
                       onClick={() => handleTabChange(i)}
-                      className={`px-4 py-2.5 text-xs font-medium transition-all border-b-2 ${
+                      className={`px-3 sm:px-4 py-2.5 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
                         activeTab === i
                           ? "text-mint-500 border-mint-500 bg-[var(--card)]"
                           : "text-[var(--muted-foreground)] border-transparent hover:text-[var(--foreground)] hover:bg-[var(--card)]/50"
@@ -270,7 +284,7 @@ export function Hero() {
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
                   >
-                    <HighlightedCode code={codeExamples[activeTab].code} />
+                    <HighlightedCode code={codeExamples[activeTab].code} lang={codeExamples[activeTab].lang} />
                   </motion.div>
                 </AnimatePresence>
               </div>
@@ -280,7 +294,9 @@ export function Hero() {
                   {codeExamples[activeTab].label}
                 </span>
                 <span className="ml-auto text-xs text-[var(--muted-foreground)]">
-                  Real production kernel from choreo repository
+                  {codeExamples[activeTab].lang === "python"
+                    ? "Python kernel via CroqPy (import croq)"
+                    : "Real production kernel from choreo repository"}
                 </span>
               </div>
             </div>

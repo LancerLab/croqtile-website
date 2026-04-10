@@ -8,7 +8,7 @@ const isGhPages = process.env.GITHUB_PAGES === "true";
 const nextConfig: NextConfig = {
   output: isGhPages ? "export" : "standalone",
   ...(isGhPages && {
-    basePath: "/croktile-website",
+    basePath: "/croqtile-website",
     images: { unoptimized: true },
     trailingSlash: true,
   }),

@@ -1,0 +1,21 @@
+---
+title: "CroqTile v1.0.4 pre-beta"
+date: "2026-04-09"
+---
+
+### 性能优化
+
+- 修复 O(N²) codegen 偏移累积和正则表达式瓶颈 — 大型 kernel 编译速度显著提升
+
+### 缺陷修复
+
+- 修复 MMA NodeIndex 在值编号传递中的问题
+- 在 WGMMA store 前始终提交 warpgroup — 修复 warp-specialized kernel 的正确性问题
+
+### SDK
+
+- SDK 基础设施更新
+
+### 文档
+
+- 添加贡献者编码风格指南

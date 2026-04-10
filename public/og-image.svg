@@ -2,7 +2,7 @@
   <rect width="1200" height="630" fill="#0a0a0a"/>
   <rect x="0" y="0" width="1200" height="4" fill="#22c55e"/>
   <text x="100" y="260" font-family="system-ui, sans-serif" font-weight="800" font-size="72" fill="#fafafa" letter-spacing="-2">
-    <tspan fill="#4ade83">crok</tspan><tspan fill="#fafafa">tile</tspan>
+    <tspan fill="#4ade83">croq</tspan><tspan fill="#fafafa">tile</tspan>
   </text>
   <text x="100" y="340" font-family="system-ui, sans-serif" font-weight="400" font-size="36" fill="#a3a3a3">
     The TileFlow Language for GPU Programming
@@ -11,6 +11,6 @@
     Write less code. Catch more bugs. Ship faster GPU kernels.
   </text>
   <text x="100" y="560" font-family="system-ui, sans-serif" font-weight="500" font-size="20" fill="#4ade83">
-    croktile.io
+    croqtile.io
   </text>
 </svg>

@@ -1,33 +1,33 @@
 ---
 title: "快速开始"
-description: "从源码构建、编译器选项与第一个 Croktile 程序。"
+description: "从源码构建、编译器选项与第一个 CroqTile 程序。"
 order: 1
 ---
 
-# 从源码构建 Croktile 并编译 Croktile 程序
-## 从零构建 Croktile
+# 从源码构建 CroqTile 并编译 CroqTile 程序
+## 从零构建 CroqTile
 ### 前置条件
 - GCC >= 8.1 或 clang >= 6，且完整支持 C++17。
 - Bison >= 3.8，Flex >= 2.6.4，且支持相关 C++ 特性。
 
 ### 环境
-为简化 Croktile 构建环境的配置，当前可使用如下命令：
+为简化 CroqTile 构建环境的配置，当前可使用如下命令：
 ```
 make setup
 ```
-该命令会获取必要的软件依赖，例如 flex 可执行文件、bison 可执行文件（3.8 或更高版本）、FileCheck 工具、gtest 源码等，从而支持 Croktile 的构建与测试。
+该命令会获取必要的软件依赖，例如 flex 可执行文件、bison 可执行文件（3.8 或更高版本）、FileCheck 工具、gtest 源码等，从而支持 CroqTile 的构建与测试。
 
-环境配置完成后，可使用如下命令构建 Croktile：
+环境配置完成后，可使用如下命令构建 CroqTile：
 ```
 make
 ```
-鉴于 Croktile 仍在开发中，运行单元测试对避免使用损坏版本至关重要：
+鉴于 CroqTile 仍在开发中，运行单元测试对避免使用损坏版本至关重要：
 ```
 make test
 ```
 若出现问题，测试应停止并报告错误。
 
-若要在 GCU 等真实硬件上运行编译后的 Croktile 程序，当前 Makefile 可协助环境配置。命令：
+若要在 GCU 等真实硬件上运行编译后的 CroqTile 程序，当前 Makefile 可协助环境配置。命令：
 ```
 make setup-gcu2
 ```
@@ -64,12 +64,12 @@ make sample-test-operator OPERATOR=add
 则测试指定算子（例如 add、mul、relu、sigmoid、softmax、tanh）。
 
 
-## 编译 Croktile-C++ 程序
-在当前实现中，Croktile 通过 **源码到源码的翻译**（或称 **转译**）将 *Croktile-C++* 程序转换为厂商支持的 C++ 语言与 API（如 CUDA/Cute 等）。
+## 编译 CroqTile-C++ 程序
+在当前实现中，CroqTile 通过 **源码到源码的翻译**（或称 **转译**）将 *CroqTile-C++* 程序转换为厂商支持的 C++ 语言与 API（如 CUDA/Cute 等）。
 
-由于 Croktile 在编译流程中集成了底层 *目标编译器*，在正确配置厂商提供的设备端 C++ 编译器时，它表现为 **端到端编译器**。
+由于 CroqTile 在编译流程中集成了底层 *目标编译器*，在正确配置厂商提供的设备端 C++ 编译器时，它表现为 **端到端编译器**。
 
-因此，构建 Croktile 后，开发者可将 Croktile-C++ 程序编译为多种输出形式，包括：
+因此，构建 CroqTile 后，开发者可将 CroqTile-C++ 程序编译为多种输出形式，包括：
 
 - 目标源码
 - 目标对象模块
@@ -79,21 +79,21 @@ make sample-test-operator OPERATOR=add
 
 除 *目标源码* 与 *工作脚本*（后文介绍）外，其余形式与 `gcc`、`clang` 类似；但具体可用性取决于目标平台的支持与限制。
 
-Croktile-C++ 编译器的用法与 `gcc` 或 `clang` 类似。例如：
+CroqTile-C++ 编译器的用法与 `gcc` 或 `clang` 类似。例如：
 ```
-croktile your_program.co
+croqtile your_program.co
 ```
 会生成 `a.out` 可执行文件。需要时可用 `-o <filename>` 指定输出文件名。`-c`、`-S` 等编译器选项在目标平台支持的前提下，行为与 C++ 编译器类似。
 
 `-t <platform>` 选项用于指定编译目标平台。此外，`-es` 选项可在不执行「目标编译」的情况下生成 *目标源码*。例如：
 ```bash
-croktile -t cuda your_program.co -es -o cuda_source.co
+croqtile -t cuda your_program.co -es -o cuda_source.co
 ```
 会生成 CUDA C++ 源码，便于特定开发任务。
 
-值得注意的是，Croktile 支持 `-E` 选项以进行仅 Croktile 的预处理。Croktile 预处理器处理简单宏以及 `#if`、`#ifdef`、`#ifndef`、`#else`、`#endif` 等指令，使 Croktile 函数能与其他 C++ 代码集成。`-E` 会输出预处理后的代码，例如移除 Croktile 函数内 `#if 0` 与 `#endif` 之间的代码。
+值得注意的是，CroqTile 支持 `-E` 选项以进行仅 CroqTile 的预处理。CroqTile 预处理器处理简单宏以及 `#if`、`#ifdef`、`#ifndef`、`#else`、`#endif` 等指令，使 CroqTile 函数能与其他 C++ 代码集成。`-E` 会输出预处理后的代码，例如移除 CroqTile 函数内 `#if 0` 与 `#endif` 之间的代码。
 
-此外，在开发场景中，Croktile 可生成 *工作脚本*（使用 `-gs` 选项）以驱动进一步的底层编译与执行，便于调试，因为许多脚本已集成以便使用。
+此外，在开发场景中，CroqTile 可生成 *工作脚本*（使用 `-gs` 选项）以驱动进一步的底层编译与执行，便于调试，因为许多脚本已集成以便使用。
 
 最后，`--help` 与 `--help-hidden` 可用于列出完整选项集，程序员与用户可据此查看适用用法。
 
@@ -101,7 +101,7 @@ croktile -t cuda your_program.co -es -o cuda_source.co
 
 ```bash
 // --help
-Usage: croktile [options] file...
+Usage: croqtile [options] file...
 Options:
   --help                    Display this information.
   --help-hidden             Display hidden options.
@@ -109,12 +109,12 @@ Options:
   -i, --infer-types         Show the result of type inference.
   -bf16n, --native-bf16     Utilize native bf16 type when target platform support.
   -f16n, --native-f16       Utilize native f16 type when target platform support.
-  -n, --remove-comments     Remove all comments in non-croktile code. (Useful for FileCheck)
+  -n, --remove-comments     Remove all comments in non-croqtile code. (Useful for FileCheck)
   -t, --target <platform>   Set the compilation target. Use '--help-target' to show current supported targets.
   -v, --verbose             Display the programs invoked by the compiler.
   -E                        Preprocess only; do not compile.
   -arch=<processor>         Set the architecture to execute the binary code.
-  -c                        Compile croktile code and the generated target code; Without linking.
+  -c                        Compile croqtile code and the generated target code; Without linking.
   -es                       Emit target source file without target source compilation.
   -gs                       Generate target script.
   -o <file>                 Place the output into <file>.

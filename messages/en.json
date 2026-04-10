@@ -9,6 +9,7 @@
     "github": "GitHub"
   },
   "hero": {
+    "brand": "CroqTile",
     "tagline": "The Next-Gen GPU & DSA Language Achieves 5x Productivity",
     "subtitle": "Write less code. Catch more bugs. Ship faster GPU kernels.",
     "cta": "Get Started",
@@ -25,7 +26,7 @@
       "point1": "Work on tensors rather than raw buffers",
       "point2": "Avoid the complexity of HW programming — TMA, DMA, tensor-core",
       "point3": "Make parallel programs easier to write and reason about",
-      "point4": "Seamless C++ integration with cutlass, CUTE, or any C++ library"
+      "point4": "Seamless C++ and Python integration — use CroqPy or link any C++ library"
     },
     "safety": {
       "title": "Compile-Time Safety",
@@ -67,7 +68,7 @@
     "resources": "Resources",
     "community": "Community",
     "company": "Company",
-    "copyright": "© {year} Croktile. All rights reserved.",
+    "copyright": "© {year} CroqTile. All rights reserved.",
     "tutorials": "Tutorials",
     "docs": "Documentation",
     "changelog": "Changelog",

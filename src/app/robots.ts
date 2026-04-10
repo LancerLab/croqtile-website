@@ -8,6 +8,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: "https://croktile.io/sitemap.xml",
+    sitemap: "https://croqtile.io/sitemap.xml",
   };
 }

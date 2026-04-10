@@ -1,12 +1,12 @@
 ---
 title: "DMA and Data Movement"
-description: "Chunk-based data movement with Croktile's DMA primitives."
+description: "Chunk-based data movement with CroqTile's DMA primitives."
 order: 4
 ---
 
 ## The DMA Statement
 
-Croktile simplifies data movement with a declarative DMA syntax:
+CroqTile simplifies data movement with a declarative DMA syntax:
 
 ```cpp
 dma.copy input.chunkat(tiling_factors) => shared;
@@ -39,4 +39,4 @@ parallel (blockIdx) {
 }
 ```
 
-The Croktile compiler automatically manages descriptor configuration, offset calculations, and memory barriers.
+The CroqTile compiler automatically manages descriptor configuration, offset calculations, and memory barriers.

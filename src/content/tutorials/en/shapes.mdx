@@ -5,17 +5,17 @@ order: 3
 ---
 
 ## Overview
-In Croktile, shape is a first-class citizen. In this section, you will learn how to program shapes in Croktile code.
+In CroqTile, shape is a first-class citizen. In this section, you will learn how to program shapes in CroqTile code.
 
 ## First-Class Citizen: Shape
-Croktile's primary function is to manage data movements, which are crucial for efficiently organizing and processing large datasets, especially in machine learning and high-performance computing scenarios. However, most C++ programming environments handle data in a casual manner —either as flat (pointers) or hierarchical structures (arrays), without a native representation of associated shapes.
+CroqTile's primary function is to manage data movements, which are crucial for efficiently organizing and processing large datasets, especially in machine learning and high-performance computing scenarios. However, most C++ programming environments handle data in a casual manner —either as flat (pointers) or hierarchical structures (arrays), without a native representation of associated shapes.
 
-In contrast, Croktile enforces code safety and simplifies the programming of shaped data by requiring that **any data declared or used must be associated with a shape**. This motivates Croktile to treat shape as a first-class citizen.
+In contrast, CroqTile enforces code safety and simplifies the programming of shaped data by requiring that **any data declared or used must be associated with a shape**. This motivates CroqTile to treat shape as a first-class citizen.
 
 
 ## Defining Shapes with `mdspan`
 
-In Croktile, shapes can be defined with the `mdspan` keyword, which stands for **Multi-Dimensional Span**. This keyword represents multi-dimensional data for computations.
+In CroqTile, shapes can be defined with the `mdspan` keyword, which stands for **Multi-Dimensional Span**. This keyword represents multi-dimensional data for computations.
 
 You can explicitly define `mdspan` variables as follows:
 
@@ -27,24 +27,24 @@ mdspan<1> s1 : [3]; // Defines a 1D shape with dimensions [3]
 In this example, the leading keyword `mdspan` indicates the declaration of a *mdspan* variable, followed by the user-provided variable name. Each *mdspan* variable is initialized with an **initialization expression**, which consists of comma-separated integer values enclosed by `[]`. The symbol `:`, which immediately follows the variable name, introduces the *initialization expression*.
 Therefore, `s0` is defined as a 2D shape with `7` rows and `8` columns, while `s1` is a 1D shape with a dimension of `3`.
 
-It is possible to optionally specify the **rank** of an *mdspan* variable by placing `<>` after the `mdspan` keyword. If the rank is explicitly specified, it informs the Croktile compiler to check for rank consistency. If the rank value differs from the corresponding *initialization expression*, it triggers a failure at compilation. Here is an example:
+It is possible to optionally specify the **rank** of an *mdspan* variable by placing `<>` after the `mdspan` keyword. If the rank is explicitly specified, it informs the CroqTile compiler to check for rank consistency. If the rank value differs from the corresponding *initialization expression*, it triggers a failure at compilation. Here is an example:
 
 ```choreo
 mdspan<3> s2 : [64, 32]; // error: the rank of mdspan is inconsistent
 ```
 
-In addition to explicit mdspan declarations, the Croktile compiler can infer the type of `mdspan` variable from its *initialization expression*, eliminating the need for the explicit `mdspan` keyword:
+In addition to explicit mdspan declarations, the CroqTile compiler can infer the type of `mdspan` variable from its *initialization expression*, eliminating the need for the explicit `mdspan` keyword:
 
 ```choreo
 s3 : [7, 8, 9]
 ```
 
-In this code, `s3` is an `mdspan` of rank `3` with dimensions `7, 8, 9`. Since Croktile **requires mdspan to always be initialized within declarations**, the type inference version is preferred in programming practice.
+In this code, `s3` is an `mdspan` of rank `3` with dimensions `7, 8, 9`. Since CroqTile **requires mdspan to always be initialized within declarations**, the type inference version is preferred in programming practice.
 
 ## Deriving *mdspan*s
 In practical coding, it is common to derive a new shape from an existing one. For example, you might want to perform data **tiling** or **blocking**, which requires dividing the dimensions of a shape. Alternatively, you might want to **pad** specific dimensions, which involves adding delta to the shape dimensions.
 
-In Croktile, such shape derivations can be easily accomplished using arithmetic operations on *mdspan*. The following code showcases an example:
+In CroqTile, such shape derivations can be easily accomplished using arithmetic operations on *mdspan*. The following code showcases an example:
 
 ```choreo
 shape : [128, 64]; // initial shape 
@@ -54,7 +54,7 @@ new-shape1 : shape [(1) + 2, (0) / 16];    // pad and reshape: [66, 8]
 
 In this example, the `new-shape0` is derived from `shape`, with dimension 0 divided by `2`, dimension 1 divided by `4`. This corresponds to *tiling* operation in high-level semantics. Additionally, the code adds a new dimension to `new-shape`. In high-level semantics, this operation is often referred to as *reshaping*.
 
-In Croktile, the definition of `new-shape0` is equivalent to:
+In CroqTile, the definition of `new-shape0` is equivalent to:
 
 ```
 new-shape0: [shape(0) / 2, shape(1) / 4, 1];
@@ -95,4 +95,4 @@ The prior version can be as well deemed as a *syntactical sugar* of a complete d
 ## Evaluation of *mdspan*
 So far, we have seen mdspan with constant values, which is sufficient for many scenarios, as high-performance device kernels often require fine-tuning based on fixed input data shapes. In these cases, the `mdspan`s are evaluated at compile-time, meaning their values do not incur extra execution time or storage overhead.
 
-However, in some scenarios, a runtime shape (where some dimensions are determined at execution) is required for building the kernel. Croktile supports this with **Symbolic Dimensions** for `mdspan`, which will be introduced later. In such scenarios, runtime evaluation of dimension values may be necessary. Fortunately, Croktile manages this evaluation immediately after entering a Croktile function in the Croktile-generated host code, resulting in negligible startup cost. **Therefore, programmers can ignore overheads related to _mdspan_ normally**.
+However, in some scenarios, a runtime shape (where some dimensions are determined at execution) is required for building the kernel. CroqTile supports this with **Symbolic Dimensions** for `mdspan`, which will be introduced later. In such scenarios, runtime evaluation of dimension values may be necessary. Fortunately, CroqTile manages this evaluation immediately after entering a CroqTile function in the CroqTile-generated host code, resulting in negligible startup cost. **Therefore, programmers can ignore overheads related to _mdspan_ normally**.
