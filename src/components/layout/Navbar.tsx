@@ -8,6 +8,7 @@ import { LangSwitch } from "./LangSwitch";
 import { useEffect, useState } from "react";
 
 const TUTORIAL_BASE = "https://lancerlab.github.io/croqtile-tutorial";
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const navLinks = [
   { href: "/", labelKey: "product" },
@@ -47,7 +48,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <img
-              src="/logo-mascot.png"
+              src={`${BASE}/logo-mascot.png`}
               alt="CroqTile"
               className="h-9 w-9 rounded-md object-contain"
             />

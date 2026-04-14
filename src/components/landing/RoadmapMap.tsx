@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { ScrollReveal } from "./ScrollReveal";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const milestones = [
   { id: 1, x: 210, y: 420, terrain: "grassland" },
   { id: 2, x: 400, y: 310, terrain: "rainforest" },
@@ -265,7 +267,7 @@ export function RoadmapMap() {
               {/* Mascot at start */}
               <g transform={`translate(${mascotPos.x - 28}, ${mascotPos.y - 28})`}>
                 <image
-                  href="/logo-mascot.png"
+                  href={`${BASE}/logo-mascot.png`}
                   width="56"
                   height="56"
                   style={{ borderRadius: "50%" }}

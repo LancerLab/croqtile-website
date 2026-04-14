@@ -8,6 +8,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   const tutorialBase = "https://lancerlab.github.io/croqtile-tutorial";
+  const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
   const sections = [
     {
@@ -36,7 +37,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5">
               <img
-              src="/logo-mascot.png"
+              src={`${basePath}/logo-mascot.png`}
               alt="CroqTile"
               className="h-8 w-8 rounded-md object-contain"
               />

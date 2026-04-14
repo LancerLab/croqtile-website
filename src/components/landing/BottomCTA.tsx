@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { ScrollReveal } from "./ScrollReveal";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const metrics = [
   { value: "62%", label: "less code than CUDA+CuTe" },
   { value: "353", label: "compile-time checks" },
@@ -21,7 +23,7 @@ export function BottomCTA() {
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <ScrollReveal>
           <img
-            src="/logo-mascot.png"
+            src={`${BASE}/logo-mascot.png`}
             alt="CroqTile mascot"
             className="mx-auto h-24 w-24 mb-8 rounded-xl object-contain"
           />

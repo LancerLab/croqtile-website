@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { FeatureCard } from "./FeatureCard";
 import { ScrollReveal } from "./ScrollReveal";
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const tuneResults = [
   { iter: "baseline", tflops: 671, eff: "22.2%", type: ".co", verified: true, opt: "1p1c, swizzle128/128, prepack, 2-stage" },
   { iter: "iter001", tflops: 759, eff: "25.1%", type: ".co", verified: true, opt: "TMA metadata staging" },
@@ -261,12 +263,12 @@ export function FeatureAI() {
             </div>
             <div className="p-3">
               <img
-                src="../autotune-efficacy-convergence.svg"
+                src={`${BASE}/autotune-efficacy-convergence.svg`}
                 alt="AI tuning convergence: 671→1127 TFLOPS across 68 iterations"
                 className="w-full h-auto rounded ai-convergence-light"
               />
               <img
-                src="../autotune-efficacy-convergence-dark.svg"
+                src={`${BASE}/autotune-efficacy-convergence-dark.svg`}
                 alt="AI tuning convergence: 671→1127 TFLOPS across 68 iterations"
                 className="w-full h-auto rounded ai-convergence-dark"
               />
