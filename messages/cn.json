@@ -109,12 +109,5 @@
     "lightMode": "浅色模式",
     "darkMode": "深色模式",
     "language": "语言"
-  },
-  "papers": {
-    "title": "论文",
-    "design": "Croqtile 设计论文",
-    "builtOn": "基于 Croqtile 的研究",
-    "artifact": "研究制品 DOI",
-    "nomination": "最佳论文提名"
   }
 }

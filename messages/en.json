@@ -109,12 +109,5 @@
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode",
     "language": "Language"
-  },
-  "papers": {
-    "title": "Papers",
-    "design": "Croqtile Design",
-    "builtOn": "Built on Croqtile",
-    "artifact": "Artifact DOI",
-    "nomination": "Best Paper Nomination"
   }
 }

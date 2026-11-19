@@ -8,7 +8,6 @@ import {
   FeatureAI,
   BottomCTA,
   HomeChangelog,
-  HomePapers,
 } from "@/components/landing";
 
 type Props = {
@@ -35,7 +34,6 @@ export default async function HomePage({ params }: Props) {
         <FeatureAI />
       </div>
       <HomeChangelog entries={changelogEntries} />
-      <HomePapers />
       <BottomCTA />
     </>
   );
