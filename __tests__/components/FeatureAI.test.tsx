@@ -44,9 +44,10 @@ describe("FeatureAI", () => {
     expect(screen.getAllByText(/TFLOPS/).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders all 4 AI points", () => {
+  it("renders all 5 AI descriptions", () => {
     renderWithProviders(<FeatureAI />);
-    expect(screen.getByText(messages.features.ai.point1)).toBeInTheDocument();
-    expect(screen.getByText(messages.features.ai.point4)).toBeInTheDocument();
+    for (const key of ["desc1", "desc2", "desc3", "desc4", "desc5"] as const) {
+      expect(screen.getByText(messages.features.ai[key])).toBeInTheDocument();
+    }
   });
 });
